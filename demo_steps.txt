@@ -1,0 +1,172 @@
+HomeSer Platform - Manual E2E Testing Steps
+=============================================
+
+## Prerequisites
+1. Backend server running on http://localhost:8000
+2. Frontend server running on http://localhost:3000
+3. Admin user created: admin@example.com / adminpass
+
+## Test Scenarios
+
+### 1. User Registration and Authentication
+1. Navigate to http://localhost:3000
+2. Click "Sign Up" button
+3. Fill registration form:
+   - Username: testuser
+   - Email: test@example.com
+   - Password: testpass123
+   - Confirm Password: testpass123
+   - First Name: Test
+   - Last Name: User
+4. Click "Create account"
+5. Verify automatic login and redirect to home page
+6. Verify user name appears in navbar
+
+### 2. Service Browsing
+1. Click "Services" in navigation
+2. Verify services are displayed with:
+   - Service images (or placeholders)
+   - Names and descriptions
+   - Prices
+   - Ratings (if any)
+3. Test search functionality:
+   - Enter "cleaning" in search box
+   - Verify filtered results
+4. Test sorting:
+   - Select "Highest Rated" from dropdown
+   - Verify services are reordered
+
+### 3. Service Detail and Reviews
+1. Click "View Details" on any service
+2. Verify service detail page shows:
+   - Service image
+   - Full description
+   - Price
+   - Add to cart functionality
+   - Reviews section
+3. Try to add a review (should fail - no purchase yet)
+4. Add service to cart:
+   - Select quantity
+   - Click "Add to Cart"
+   - Verify success message
+
+### 4. Shopping Cart
+1. Click cart icon in navbar
+2. Verify cart shows:
+   - Added service
+   - Correct quantity and price
+   - Total calculation
+3. Test quantity changes:
+   - Increase/decrease quantity
+   - Verify total updates
+4. Test remove item:
+   - Click trash icon
+   - Confirm removal
+
+### 5. Checkout Process
+1. Add services back to cart
+2. Click "Proceed to Checkout"
+3. Fill checkout form:
+   - Name: Test User
+   - Phone: +8801234567890
+   - Address: 123 Test Street, Dhaka, Bangladesh
+4. Click "Pay ৳[amount]"
+5. Should redirect to SSLCOMMERZ sandbox
+
+### 6. SSLCOMMERZ Payment Testing
+**Test Card Details:**
+- VISA: 4111111111111111
+- CVV: 111
+- Expiry: 12/25
+- OTP: 111111
+
+**Payment Flow:**
+1. On SSLCOMMERZ page, select "Test Card"
+2. Enter test card details above
+3. Complete payment process
+4. Should redirect back to success page
+
+### 7. Admin Functions
+1. Logout current user
+2. Login as admin: admin@example.com / adminpass
+3. Navigate to "Admin Dashboard"
+4. Verify admin-only features:
+   - Platform statistics
+   - User promotion functionality
+5. Test user promotion:
+   - Go to "Promote User" tab
+   - Enter user ID (find from Django admin)
+   - Click "Promote to Admin"
+
+### 8. Review System (After Purchase)
+1. Login as user who completed purchase
+2. Navigate to purchased service detail
+3. Try adding review:
+   - Select rating (1-5 stars)
+   - Write review text
+   - Submit review
+4. Verify review appears on service page
+
+### 9. User Dashboard
+1. Navigate to "Dashboard"
+2. Verify tabs work:
+   - My Orders: Should show completed orders
+   - My Reviews: Should show submitted reviews
+   - Profile: Should show user information
+   - Settings: Should show account preferences
+
+### 10. Responsive Design Testing
+Test on different screen sizes:
+- Desktop (1920px+)
+- Laptop (1024px-1919px)
+- Tablet (768px-1023px)
+- Mobile (320px-767px)
+
+Verify:
+- Navigation collapses to hamburger menu on mobile
+- Cards stack properly
+- Forms remain usable
+- Text remains readable
+
+### 11. Error Handling
+1. Test invalid login credentials
+2. Test empty form submissions
+3. Test network errors (disconnect internet briefly)
+4. Test payment cancellation
+5. Test payment failure scenarios
+
+### 12. Performance Testing
+1. Check page load times
+2. Test with slow network connection
+3. Verify images load properly
+4. Test cart persistence across browser refresh
+
+## Expected Results
+
+### Successful Test Completion Should Show:
+- ✅ User can register and login
+- ✅ Services display correctly with search/filter
+- ✅ Cart functionality works properly
+- ✅ Checkout process completes
+- ✅ Payment integration works in sandbox
+- ✅ Admin functions are accessible
+- ✅ Reviews can be submitted after purchase
+- ✅ Dashboard shows user data
+- ✅ Responsive design works on all devices
+- ✅ Error handling provides user feedback
+
+### Common Issues and Solutions:
+1. **CORS errors**: Check backend CORS settings
+2. **Payment redirect fails**: Verify SSLCOMMERZ URLs in settings
+3. **Images not loading**: Check Cloudinary configuration
+4. **API errors**: Check backend server is running
+5. **Authentication issues**: Clear browser storage and retry
+
+## Test Data Cleanup
+After testing, you can reset the database:
+```bash
+cd homeser-backend-drf
+rm db.sqlite3
+python manage.py migrate
+python manage.py createsuperuser
+```
