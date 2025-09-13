@@ -1,3 +1,9 @@
+# homeser/asgi.py
+# This file configures the Asynchronous Server Gateway Interface (ASGI) for the HomeSer project.
+# ASGI is a spiritual successor to WSGI, providing a standard interface between
+# async-capable Python web servers, frameworks, and applications.
+# It's used for handling websockets and long-polling connections.
+
 """
 ASGI config for homeser project.
 
@@ -11,6 +17,6 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'homeser.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "homeser.settings")
 
 application = get_asgi_application()

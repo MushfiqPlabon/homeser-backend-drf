@@ -1,4 +1,4 @@
-# HomeSer Backend - Django REST Framework
+# HomeSer Backend
 
 A comprehensive household service platform backend built with Django REST Framework.
 
@@ -18,65 +18,39 @@ A comprehensive household service platform backend built with Django REST Framew
 ### Prerequisites
 
 - Python 3.8+
-- pip
-- Virtual environment (recommended)
+- [uv](https://docs.astral.sh/uv/) (Python package manager and project manager)
 
 ### Installation
 
-1. **Clone the repository and navigate to backend directory:**
+1. **Install dependencies:**
    ```bash
-   cd homeser-backend-drf
+   uv sync
    ```
 
-2. **Run the setup script:**
-   ```bash
-   chmod +x run_local.sh
-   ./run_local.sh
-   ```
-
-   This script will:
-   - Create a virtual environment
-   - Install dependencies
-   - Run database migrations
-   - Create sample data
-   - Create admin user (admin@example.com / adminpass)
-   - Start the development server
-
-### Manual Setup
-
-If you prefer manual setup:
-
-1. **Create and activate virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables:**
+2. **Set up environment variables:**
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
-4. **Run migrations:**
+3. **Run migrations:**
    ```bash
-   python manage.py makemigrations
-   python manage.py migrate
+   uv run python manage.py migrate
    ```
 
-5. **Create superuser:**
+4. **Create superuser:**
    ```bash
-   python manage.py createsuperuser
+   uv run python manage.py createsuperuser
+   ```
+
+5. **Load sample data (optional):**
+   ```bash
+   uv run python manage.py load_sample_data
    ```
 
 6. **Start development server:**
    ```bash
-   python manage.py runserver
+   uv run python manage.py runserver
    ```
 
 ## API Endpoints
@@ -115,11 +89,11 @@ Create a `.env` file with the following variables:
 SECRET_KEY=your-secret-key-here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
-DATABASE_URL=postgresql://user:password@localhost:5432/homeser  # Optional
+# DATABASE_URL=postgresql://user:password@localhost:5432/homeser  # Optional, for PostgreSQL
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-CLOUDINARY_CLOUD_NAME=your-cloud-name  # Optional
-CLOUDINARY_API_KEY=your-api-key  # Optional
-CLOUDINARY_API_SECRET=your-api-secret  # Optional
+# CLOUDINARY_CLOUD_NAME=your-cloud-name  # Optional
+# CLOUDINARY_API_KEY=your-api-key  # Optional
+# CLOUDINARY_API_SECRET=your-api-secret  # Optional
 SSLCOMMERZ_STORE_ID=testbox
 SSLCOMMERZ_STORE_PASS=qwerty
 SSLCOMMERZ_IS_SANDBOX=True
@@ -131,7 +105,7 @@ BACKEND_URL=http://localhost:8000
 
 Run the test suite:
 ```bash
-python manage.py test
+uv run python manage.py test
 ```
 
 ## SSLCOMMERZ Integration
@@ -144,58 +118,96 @@ The platform integrates with SSLCOMMERZ payment gateway:
   - MasterCard: `5111111111111111` CVV `111` Exp `12/25`
   - OTP: `111111` or `123456`
 
-## Deployment
-
-### Vercel Deployment
-
-1. Install Vercel CLI:
-   ```bash
-   npm i -g vercel
-   ```
-
-2. Create `vercel.json`:
-   ```json
-   {
-     "builds": [
-       {
-         "src": "homeser/wsgi.py",
-         "use": "@vercel/python"
-       }
-     ],
-     "routes": [
-       {
-         "src": "/(.*)",
-         "dest": "homeser/wsgi.py"
-       }
-     ]
-   }
-   ```
-
-3. Deploy:
-   ```bash
-   vercel --prod
-   ```
-
-## Project Structure
-
-```
-homeser-backend-drf/
-├── homeser/                 # Main project settings
-├── accounts/                # User authentication and profiles
-├── services/                # Service catalog and reviews
-├── orders/                  # Cart and order management
-├── payments/                # Payment processing
-├── api/                     # API views and serializers
-├── scripts/                 # Utility scripts
-├── requirements.txt         # Python dependencies
-├── run_local.sh            # Quick setup script
-└── README.md               # This file
-```
-
 ## Admin Interface
 
 Access the Django admin at `http://localhost:8000/admin/` with the created admin user.
 
-## Support
+## Sample Data
 
-For issues and questions, please check the documentation or create an issue in the repository.
+The application comes with sample data for testing:
+- Service categories: Cleaning, Plumbing, Electrical, Gardening, Painting
+- Services: House Deep Cleaning, Bathroom Cleaning, Pipe Repair, etc.
+- Sample users: john_doe, jane_smith, mike_johnson
+- Reviews for services
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Database Not Populating / Empty API Responses (e.g., /api/services/ returns empty JSON)**
+
+This often happens if your database is not correctly set up or populated, or if a system-wide environment variable is interfering.
+
+1.  **Check for `DATABASE_URL` environment variable:**
+    If you intend to use SQLite for local development, ensure the `DATABASE_URL` environment variable is NOT set in your system. A system-wide `DATABASE_URL` will override your `settings.py` and attempt to connect to a PostgreSQL database.
+
+    *   **To unset it temporarily in your current terminal session:**
+        *   **Windows (Command Prompt):** `set DATABASE_URL=`
+        *   **Windows (PowerShell):** `Remove-Item Env:DATABASE_URL`
+        *   **Linux/macOS:** `unset DATABASE_URL`
+
+2.  **Clear and Repopulate the Database:**
+    Ensure your Django server is **STOPPED** before performing these steps to avoid file locks.
+
+    *   **Delete the SQLite database file:**
+        ```bash
+        rm db.sqlite3
+        ```
+        (This clears all data and migration history for SQLite)
+
+    *   **Run database migrations:**
+        ```bash
+        uv run python manage.py migrate
+        ```
+        (This creates the `db.sqlite3` file and sets up the schema)
+
+    *   **Create a superuser (interactive):**
+        ```bash
+        uv run python manage.py createsuperuser
+        ```
+        (Follow the prompts to create your admin user)
+
+    *   **Load sample data:**
+        ```bash
+        uv run python manage.py load_sample_data
+        ```
+        (This runs the custom management command to populate categories, services, etc.)
+
+    *   **Restart your Django server** and check the API endpoint again.
+
+**CORS Errors:**
+```python
+# In settings.py, ensure frontend URL is in CORS_ALLOWED_ORIGINS
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://your-frontend-domain.vercel.app",
+]
+```
+
+**API Connection Failed:**
+```bash
+# Check if backend is running
+curl http://localhost:8000/api/services/
+```
+
+## Performance Optimizations
+
+The HomeSer backend includes several performance optimizations:
+
+### Caching
+- Redis caching for frequently accessed data (services, service details)
+- Configurable cache timeout (default: 15 minutes)
+- Automatic cache invalidation
+
+### Database Optimization
+- Efficient database queries with `select_related` and `prefetch_related`
+- Database indexing on frequently queried fields
+- Annotation-based calculations to reduce Python-level processing
+
+### Pagination
+- Built-in pagination for large datasets
+- Configurable page size (default: 20 items per page)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

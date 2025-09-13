@@ -9,10 +9,11 @@ User = get_user_model()
 
 class ServiceCategory(models.Model):
     """Service categories like Cleaning, Plumbing, etc."""
+
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(unique=True, blank=True)
     description = models.TextField(blank=True)
-    icon = CloudinaryField('image', blank=True, null=True)
+    icon = CloudinaryField("image", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -29,19 +30,22 @@ class ServiceCategory(models.Model):
 
 class Service(models.Model):
     """Individual services offered"""
-    name = models.CharField(max_length=200)
+
+    name = models.CharField(max_length=200, db_index=True)
     slug = models.SlugField(unique=True, blank=True)
-    category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, related_name='services')
+    category = models.ForeignKey(
+        ServiceCategory, on_delete=models.CASCADE, related_name="services"
+    )
     short_desc = models.CharField(max_length=300)
     description = models.TextField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = CloudinaryField('image', blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, db_index=True)
+    image = models.ImageField(upload_to="services/", blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -51,6 +55,12 @@ class Service(models.Model):
     @property
     def avg_rating(self):
         """Calculate average rating for this service"""
+        # Prioritize pre-calculated (annotated) value from queryset for efficiency.
+        # This avoids an extra database query if the value is already available.
+        if hasattr(self, "avg_rating_val") and self.avg_rating_val is not None:
+            return round(self.avg_rating_val, 1)
+        # Fallback: If not annotated, perform a database query to calculate.
+        # This is less efficient, especially in list views.
         reviews = self.reviews.all()
         if reviews:
             return round(sum(review.rating for review in reviews) / len(reviews), 1)
@@ -59,6 +69,12 @@ class Service(models.Model):
     @property
     def review_count(self):
         """Count of reviews for this service"""
+        # Prioritize pre-calculated (annotated) value from queryset for efficiency.
+        # This avoids an extra database query if the value is already available.
+        if hasattr(self, "review_count_val") and self.review_count_val is not None:
+            return self.review_count_val
+        # Fallback: If not annotated, perform a database query to count.
+        # This is less efficient, especially in list views.
         return self.reviews.count()
 
     @property
@@ -74,8 +90,11 @@ class Service(models.Model):
 
 class Review(models.Model):
     """Customer reviews for services"""
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='reviews')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews')
+
+    service = models.ForeignKey(
+        Service, on_delete=models.CASCADE, related_name="reviews"
+    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reviews")
     rating = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
@@ -84,8 +103,8 @@ class Review(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('service', 'user')
-        ordering = ['-created_at']
+        unique_together = ("service", "user")
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.service.name} ({self.rating}/5)"

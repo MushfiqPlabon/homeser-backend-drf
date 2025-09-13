@@ -1,0 +1,22 @@
+// vercel.json
+// This file configures how the HomeSer Django backend is deployed on Vercel.
+// It specifies the build process (using @vercel/python) and defines routing rules
+// to serve static files and direct all other requests to the Django WSGI application.
+{
+  "builds": [
+    {
+      "src": "homeser/wsgi.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "homeser/wsgi.py"
+    }
+  ]
+}
