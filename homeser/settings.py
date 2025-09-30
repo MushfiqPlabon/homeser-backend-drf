@@ -21,7 +21,14 @@ POPULATE_ADVANCED_STRUCTURES_ON_STARTUP = (
     config.get("POPULATE_ADVANCED_STRUCTURES_ON_STARTUP", "False") == "True"
 )
 
-ALLOWED_HOSTS = config.get("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
+# Vercel deployment settings
+VERCEL_URL = os.environ.get("VERCEL_URL")
+if VERCEL_URL:
+    ALLOWED_HOSTS = [VERCEL_URL, "localhost", "127.0.0.1", ".vercel.app"]
+    CSRF_TRUSTED_ORIGINS = [f"https://{VERCEL_URL}", "https://*.vercel.app"]
+else:
+    ALLOWED_HOSTS = config.get("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -88,7 +95,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "homeser.wsgi.application"
+WSGI_APPLICATION = "homeser.wsgi.app"
 
 # Database
 # Always use SQLite for local development unless explicitly overridden
