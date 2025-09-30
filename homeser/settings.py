@@ -2,13 +2,14 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from decouple import Config, RepositoryEnv
+from decouple import Config, RepositoryEmpty
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load configuration from .env file with priority over system environment variables
-config = Config(RepositoryEnv(BASE_DIR / '.env'))
+# Load configuration from environment variables (works with Vercel)
+# RepositoryEmpty means we only load from system environment variables, not .env files
+config = Config(RepositoryEmpty())
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
