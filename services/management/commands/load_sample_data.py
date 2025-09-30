@@ -1,7 +1,8 @@
-from django.core.management.base import BaseCommand
-from services.models import ServiceCategory, Service
-from accounts.models import UserProfile
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
+
+from accounts.models import UserProfile
+from services.models import Service, ServiceCategory
 
 
 class Command(BaseCommand):
@@ -22,15 +23,15 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Creating service categories..."))
         for cat_data in categories_data:
             category, created = ServiceCategory.objects.get_or_create(
-                name=cat_data["name"], defaults={"description": cat_data["description"]}
+                name=cat_data["name"], defaults={"description": cat_data["description"]},
             )
             if created:
                 self.stdout.write(
-                    self.style.SUCCESS(f"Created category: {category.name}")
+                    self.style.SUCCESS(f"Created category: {category.name}"),
                 )
             else:
                 self.stdout.write(
-                    self.style.WARNING(f"Category already exists: {category.name}")
+                    self.style.WARNING(f"Category already exists: {category.name}"),
                 )
 
         # Create sample services
@@ -94,17 +95,17 @@ class Command(BaseCommand):
                 )
                 if created:
                     self.stdout.write(
-                        self.style.SUCCESS(f"Created service: {service.name}")
+                        self.style.SUCCESS(f"Created service: {service.name}"),
                     )
                 else:
                     self.stdout.write(
-                        self.style.WARNING(f"Service already exists: {service.name}")
+                        self.style.WARNING(f"Service already exists: {service.name}"),
                     )
             except ServiceCategory.DoesNotExist:
                 self.stdout.write(
                     self.style.ERROR(
-                        f"Category {service_data['category']} not found for service {service_data['name']}"
-                    )
+                        f"Category {service_data['category']} not found for service {service_data['name']}",
+                    ),
                 )
 
         # Create profile for admin user
@@ -112,19 +113,19 @@ class Command(BaseCommand):
         try:
             admin_user = User.objects.get(email="admin@example.com")
             profile, created = UserProfile.objects.get_or_create(
-                user=admin_user, defaults={"bio": "System Administrator"}
+                user=admin_user, defaults={"bio": "System Administrator"},
             )
             if created:
                 self.stdout.write(self.style.SUCCESS("Admin user profile created."))
             else:
                 self.stdout.write(
-                    self.style.WARNING("Admin user profile already exists.")
+                    self.style.WARNING("Admin user profile already exists."),
                 )
         except User.DoesNotExist:
             self.stdout.write(
                 self.style.ERROR(
-                    "Admin user (admin@example.com) not found. Please create superuser first."
-                )
+                    "Admin user (admin@example.com) not found. Please create superuser first.",
+                ),
             )
 
         self.stdout.write(self.style.SUCCESS("Sample data loaded successfully!"))

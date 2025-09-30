@@ -4,8 +4,7 @@
 # async-capable Python web servers, frameworks, and applications.
 # It's used for handling websockets and long-polling connections.
 
-"""
-ASGI config for homeser project.
+"""ASGI config for homeser project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

@@ -1,12 +1,12 @@
-from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework.test import APITestCase
 from rest_framework import status
+from rest_framework.test import APITestCase
 
-from services.models import Service, ServiceCategory
 from orders.models import Order, OrderItem
 from payments.models import Payment
+from services.models import Service, ServiceCategory
 
 User = get_user_model()
 
@@ -35,7 +35,7 @@ class AuthenticationTestCase(APITestCase):
         """Test user login returns tokens"""
         # Create user
         User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123",
         )
 
         url = reverse("login")
@@ -51,7 +51,7 @@ class ReviewTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123",
         )
         self.category = ServiceCategory.objects.create(name="Test Category")
         self.service = Service.objects.create(
@@ -73,13 +73,19 @@ class ReviewTestCase(APITestCase):
 
     def test_review_with_purchase_succeeds(self):
         """Test that review works after purchasing service"""
-        # Create a confirmed, paid order
+        # Create an order using proper initial state
         order = Order.objects.create(
-            user=self.user, status="confirmed", payment_status="paid"
+            user=self.user, status="draft", payment_status="unpaid",
         )
         OrderItem.objects.create(
-            order=order, service=self.service, quantity=1, price=self.service.price
+            order=order, service=self.service, quantity=1, unit_price=self.service.price,
         )
+
+        # Use proper transitions to set the order status
+        order.submit()  # Transition from draft to pending
+        order.set_payment_paid()  # This will set payment_status to "paid"
+        order.confirm()  # This will set status to "confirmed" if payment_status is "paid"
+        order.save()
 
         self.client.force_authenticate(user=self.user)
 
@@ -94,7 +100,7 @@ class CheckoutTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123",
         )
         self.category = ServiceCategory.objects.create(name="Test Category")
         self.service = Service.objects.create(
@@ -109,10 +115,12 @@ class CheckoutTestCase(APITestCase):
         """Test checkout endpoint creates order and attempts SSLCOMMERZ session"""
         self.client.force_authenticate(user=self.user)
 
-        # Add item to cart
-        cart = Order.objects.create(user=self.user, status="cart")
+        # Add item to cart - using the proper initial state
+        cart = Order.objects.create(
+            user=self.user, status="draft", payment_status="unpaid", customer_name="", customer_address="", customer_phone="",
+        )
         OrderItem.objects.create(
-            order=cart, service=self.service, quantity=1, price=self.service.price
+            order=cart, service=self.service, quantity=1, unit_price=self.service.price,
         )
 
         url = reverse("checkout")
@@ -126,13 +134,14 @@ class CheckoutTestCase(APITestCase):
 
         # Should either succeed or fail gracefully (depending on network)
         self.assertIn(
-            response.status_code, [status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST]
+            response.status_code, [status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST],
         )
 
-        # Check that order was updated
-        cart.refresh_from_db()
-        self.assertEqual(cart.customer_name, "Test User")
-        self.assertEqual(cart.customer_address, "123 Test St")
+        # Fetch the updated order from the database
+        updated_order = Order.objects.get(id=cart.id) # Use the original cart's ID
+
+        self.assertEqual(updated_order.customer_name, "Test User")
+        self.assertEqual(updated_order.customer_address, "123 Test St")
 
 
 class PaymentTestCase(TestCase):
@@ -140,26 +149,25 @@ class PaymentTestCase(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123",
         )
         self.order = Order.objects.create(
-            user=self.user, status="pending", total=100.00
+            user=self.user, status="pending", total=100.00,
         )
 
     def test_ipn_processing_sets_payment_status(self):
         """Test IPN processing sets payment_status='paid' after validation"""
         # Create payment record
         payment = Payment.objects.create(
-            order=self.order, transaction_id="test_tran_123", amount=100.00
+            order=self.order, transaction_id="test_tran_123", amount=100.00,
         )
 
         # Simulate successful validation (would normally call SSLCOMMERZ)
         payment.status = "completed"
         payment.save()
 
-        self.order.payment_status = "paid"
-        self.order.status = "confirmed"
+        # Use the proper django-fsm transition method
+        self.order.set_payment_paid()
         self.order.save()
 
         self.assertEqual(self.order.payment_status, "paid")
-        self.assertEqual(self.order.status, "confirmed")

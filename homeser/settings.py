@@ -1,26 +1,27 @@
-"""
-Django settings for homeser project.
-"""
-
 import os
-from pathlib import Path
 from datetime import timedelta
-from decouple import config
+from pathlib import Path
+
+from dotenv import dotenv_values
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load configuration from .env file with priority over system environment variables
+config = dotenv_values(BASE_DIR / ".env")
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
+SECRET_KEY = config.get("SECRET_KEY", "django-insecure-change-me-in-production")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config("DEBUG", default=True, cast=bool)
+DEBUG = config.get("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
-    cast=lambda v: [s.strip() for s in v.split(",")],
+# Control whether to populate advanced structures on startup
+POPULATE_ADVANCED_STRUCTURES_ON_STARTUP = (
+    config.get("POPULATE_ADVANCED_STRUCTURES_ON_STARTUP", "False") == "True"
 )
+
+ALLOWED_HOSTS = config.get("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
 
 # Application definition
 INSTALLED_APPS = [
@@ -38,21 +39,26 @@ INSTALLED_APPS = [
     "cloudinary_storage",
     "cloudinary",
     "drf_spectacular",  # Add this for Swagger/OpenAPI documentation
+    "guardian",  # Add django-guardian for RBAC
+    "django_ratelimit",  # Add django-ratelimit for rate limiting
     # Local apps
     "accounts",
     "services",
     "orders",
     "payments",
     "api",
+    "utils",
+    # Third party apps (added for complexity reduction)
+    "model_utils",
+    "cachalot",
+    "rest_framework_extensions",
+    # Additional apps for performance optimization
+    # "dramatiq",  # Not used in Vercel deployment - background tasks are synchronous
 ]
 
 MIDDLEWARE = [
-    # Order is important here:
-    # 1. CorsMiddleware: Should be very high, before any middleware that might generate responses.
     "corsheaders.middleware.CorsMiddleware",
-    # 2. SecurityMiddleware: Handles security protections like X-Content-Type-Options, X-XSS-Protection.
     "django.middleware.security.SecurityMiddleware",
-    # 3. WhiteNoiseMiddleware: Serves static files efficiently.
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -67,7 +73,9 @@ ROOT_URLCONF = "homeser.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [
+            BASE_DIR / "templates",  # Add this line
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -82,24 +90,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "homeser.wsgi.application"
 
-# Check if we have individual database credentials
-DB_NAME = config("dbname", default=None)
-DB_USER = config("user", default=None)
-DB_PASSWORD = config("password", default=None)
-DB_HOST = config("host", default=None)
-DB_PORT = config("port", default=None)
-
 # Database
+# Always use SQLite for local development unless explicitly overridden
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
-    }
+    },
 }
 
-# Use PostgreSQL if database credentials are provided
-# Read database configuration using python-decouple
-if all([DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT]):
+# Check if we have individual database credentials
+# Explicitly check for empty strings since python-dotenv returns None for missing keys
+DB_NAME = config.get("dbname")
+DB_USER = config.get("user")
+DB_PASSWORD = config.get("password")
+DB_HOST = config.get("host")
+DB_PORT = config.get("port")
+
+# Only use PostgreSQL if ALL database credentials are provided and not empty/null
+# This ensures we don't accidentally try to connect to PostgreSQL with partial credentials
+DB_CREDENTIALS = [DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT]
+if all(cred is not None and cred.strip() != "" for cred in DB_CREDENTIALS):
     DATABASES["default"] = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": DB_NAME,
@@ -108,26 +119,11 @@ if all([DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT]):
         "HOST": DB_HOST,
         "PORT": DB_PORT,
     }
-elif config("DATABASE_URL", default=None):
+elif config.get("DATABASE_URL"):
     # Fallback to DATABASE_URL if individual credentials are not provided
     import dj_database_url
 
-    DATABASES["default"] = dj_database_url.parse(config("DATABASE_URL"))
-
-if all([DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT]):
-    DATABASES["default"] = {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": DB_NAME,
-        "USER": DB_USER,
-        "PASSWORD": DB_PASSWORD,
-        "HOST": DB_HOST,
-        "PORT": DB_PORT,
-    }
-elif config("DATABASE_URL", default=None):
-    # Fallback to DATABASE_URL if individual credentials are not provided
-    import dj_database_url
-
-    DATABASES["default"] = dj_database_url.parse(config("DATABASE_URL"))
+    DATABASES["default"] = dj_database_url.parse(config.get("DATABASE_URL"))
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -166,6 +162,12 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Custom User Model
 AUTH_USER_MODEL = "accounts.User"
 
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",  # Default backend
+    "guardian.backends.ObjectPermissionBackend",  # Django Guardian backend
+]
+
 # REST Framework configuration
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -186,54 +188,234 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
 }
 
+# Email Configuration
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(config.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = config.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = config.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = config.get("DEFAULT_FROM_EMAIL", "webmaster@localhost")
+
+# Admin email for notifications
+ADMIN_EMAIL = config.get("ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
+
 # Cache Configuration
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "LOCATION": config.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
-    }
+    },
 }
 
 # Cache timeout from environment or default to 15 minutes
-CACHE_TTL = config("CACHE_TTL", default=900, cast=int)
+CACHE_TTL = int(config.get("CACHE_TTL", "900"))
+
+# Cachalot settings to automatically cache and invalidate ORM queries
+CACHALOT_ENABLED = True
+CACHALOT_CACHE = "default"
+# Tables that should never be cached (useful for frequently updated tables)
+CACHALOT_UNCACHABLE_TABLES = [
+    # Add any tables that change frequently and shouldn't be cached
+    # Example: 'django_session', 'auth_user' if frequently updated
+]
+
+# Additional cachalot settings for optimal performance
+CACHALOT_ONLY_CACHABLE_TABLES = [
+    # If we want to limit caching to only specific tables, we can add them here
+    # This is commented out to cache all tables except those in CACHALOT_UNCACHABLE_TABLES
+]
+
+# Timeout for cached queries in seconds (optional, can be specified per query)
+# CACHALOT_TIMEOUT = 300  # 5 minutes
+
+# Redis configuration for direct connection
+REDIS_URL = config.get("REDIS_URL", "redis://127.0.0.1:6379/1")
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://127.0.0.1:3000",
-    cast=lambda v: [s.strip() for s in v.split(",")],
-)
+CORS_ALLOWED_ORIGINS = config.get(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000",
+).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True  # WARNING: Only for development. Set to False and configure CORS_ALLOWED_ORIGINS in production for security.
 
 # Cloudinary configuration
 CLOUDINARY_STORAGE = {
-    "CLOUD_NAME": config("CLOUDINARY_CLOUD_NAME", default=""),
-    "API_KEY": config("CLOUDINARY_API_KEY", default=""),
-    "API_SECRET": config("CLOUDINARY_API_SECRET", default=""),
+    "CLOUD_NAME": config.get("CLOUDINARY_CLOUD_NAME", ""),
+    "API_KEY": config.get("CLOUDINARY_API_KEY", ""),
+    "API_SECRET": config.get("CLOUDINARY_API_SECRET", ""),
 }
 
 if CLOUDINARY_STORAGE["CLOUD_NAME"]:
     DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
+# Security Headers
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_SSL_REDIRECT = config.get("SECURE_SSL_REDIRECT", "False") == "True"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = config.get("SESSION_COOKIE_SECURE", "False") == "True"
+CSRF_COOKIE_SECURE = config.get("CSRF_COOKIE_SECURE", "False") == "True"
+X_FRAME_OPTIONS = "DENY"
+
 # SSLCOMMERZ Configuration
-SSLCOMMERZ_STORE_ID = config("SSLCOMMERZ_STORE_ID", default="testbox")
-SSLCOMMERZ_STORE_PASS = config("SSLCOMMERZ_STORE_PASS", default="qwerty")
-SSLCOMMERZ_IS_SANDBOX = config("SSLCOMMERZ_IS_SANDBOX", default=True, cast=bool)
+SSLCOMMERZ_STORE_ID = config.get("SSLCOMMERZ_STORE_ID", "testbox")
+SSLCOMMERZ_STORE_PASS = config.get("SSLCOMMERZ_STORE_PASS", "qwerty")
+SSLCOMMERZ_IS_SANDBOX = config.get("SSLCOMMERZ_IS_SANDBOX", "True") == "True"
 
 # Frontend and Backend URLs
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
-BACKEND_URL = config("BACKEND_URL", default="http://localhost:8000")
+FRONTEND_URL = config.get("FRONTEND_URL", "http://localhost:3000")
+BACKEND_URL = config.get("BACKEND_URL", "http://localhost:8000")
 
 # DRF Spectacular settings for Swagger/OpenAPI documentation
 SPECTACULAR_SETTINGS = {
     "TITLE": "HomeSer API",
-    "DESCRIPTION": "A comprehensive household service platform API",
+    "DESCRIPTION": """
+        # HomeSer API Documentation
+    
+        A comprehensive household service platform API that allows users to:
+        - Browse various household services
+        - Register and login to user accounts
+        - Book services and manage orders
+        - Leave reviews for completed services
+        
+        ## Authentication
+        - Public endpoints (e.g., service browsing) don't require authentication
+        - Private endpoints (e.g., booking, order management) require JWT tokens
+        - Staff endpoints require admin privileges
+        
+        ## Getting Started
+        1. Register a new account or login with existing credentials
+        2. Use the JWT tokens in the authorization header for private endpoints
+        3. Browse services and make bookings as needed
+    """,
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
     # OTHER SETTINGS
 }
+
+# Guardian settings
+GUARDIAN_RAISE_403 = True
+
+# Logging Configuration
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": BASE_DIR / "django.log",
+            "formatter": "verbose",
+        },
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "api": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "api.services": {
+            "handlers": ["console", "file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "api.lock_free_cart": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "utils": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+# Dramatiq Configuration - Not used in Vercel deployment, background tasks are synchronous
+# DRAMATIQ_BROKER = {
+#     "BROKER": "dramatiq.brokers.redis.RedisBroker",
+#     "OPTIONS": {
+#         "url": config.get("REDIS_URL", "redis://127.0.0.1:6379/2"),
+#     },
+#     "MIDDLEWARE": [
+#         "dramatiq.middleware.AgeLimit",
+#         "dramatiq.middleware.TimeLimit",
+#         "dramatiq.middleware.Callbacks",
+#         "dramatiq.middleware.Retries",
+#         "django_dramatiq.middleware.DbConnectionsMiddleware",
+#     ]
+# }
+#
+# DRAMATIQ_WORKER = {
+#     "MIDDLEWARE": [
+#         "dramatiq.middleware.AgeLimit",
+#         "dramatiq.middleware.TimeLimit",
+#         "dramatiq.middleware.Callbacks",
+#         "dramatiq.middleware.Retries",
+#         "django_dramatiq.middleware.DbConnectionsMiddleware",
+#     ]
+# }
+
+# Opentelemetry Configuration
+if config.get("ENABLE_OPENTELEMETRY", "False") == "True":
+    INSTALLED_APPS += ["opentelemetry.instrumentation.django"]
+
+# Sentry Configuration
+if config.get("SENTRY_DSN"):
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=config.get("SENTRY_DSN"),
+        integrations=[DjangoIntegration()],
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=1.0,
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True,
+    )
+
+# MeiliSearch Configuration - Not used in Vercel deployment, using PostgreSQL full-text search instead
+# MEILISEARCH_CONFIG = {
+#     "host": config.get("MEILISEARCH_HOST", "http://127.0.0.1:7700"),
+#     "api_key": config.get("MEILISEARCH_MASTER_KEY", "masterKey"),
+# }
+
+# RedisBloom Configuration
+REDISBLOOM_HOST = config.get("REDISBLOOM_HOST", "redis://127.0.0.1:6379")

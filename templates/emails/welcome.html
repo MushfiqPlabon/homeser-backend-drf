@@ -1,0 +1,10 @@
+{% extends 'emails/base.html' %}
+
+{% block content %}
+<h2>Welcome to {{ site_name }}!</h2>
+<p>Hi {{ user.first_name|default:user.username }},</p>
+<p>Thank you for joining {{ site_name }}! We're excited to have you as part of our community.</p>
+<p>You can now browse our services, add items to your cart, and place orders for household services.</p>
+<p><a href="{{ login_url }}" class="button">Get Started</a></p>
+<p>If you have any questions, feel free to contact our support team.</p>
+{% endblock %}

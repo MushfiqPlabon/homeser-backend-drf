@@ -1,7 +1,9 @@
 import os
-from django.core.management.base import BaseCommand
-from django.core.files import File
+
 from django.conf import settings
+from django.core.files import File
+from django.core.management.base import BaseCommand
+
 from services.models import Service
 
 
@@ -13,7 +15,7 @@ class Command(BaseCommand):
             "--image-dir",
             type=str,
             default=os.path.join(
-                settings.BASE_DIR, "..", "homeser-frontend-react", "public", "images"
+                settings.BASE_DIR, "..", "homeser-frontend-react", "public", "images",
             ),
             help="Directory containing service images",
         )
@@ -23,7 +25,7 @@ class Command(BaseCommand):
 
         if not os.path.exists(image_dir):
             self.stdout.write(
-                self.style.ERROR(f"Image directory does not exist: {image_dir}")
+                self.style.ERROR(f"Image directory does not exist: {image_dir}"),
             )
             return
 
@@ -53,8 +55,8 @@ class Command(BaseCommand):
                 ):
                     self.stdout.write(
                         self.style.WARNING(
-                            f"Service '{service_name}' already has an image. Skipping..."
-                        )
+                            f"Service '{service_name}' already has an image. Skipping...",
+                        ),
                     )
                     continue
 
@@ -63,8 +65,8 @@ class Command(BaseCommand):
                 if not os.path.exists(image_path):
                     self.stdout.write(
                         self.style.WARNING(
-                            f"Image file not found: {image_path}. Skipping..."
-                        )
+                            f"Image file not found: {image_path}. Skipping...",
+                        ),
                     )
                     continue
 
@@ -75,19 +77,19 @@ class Command(BaseCommand):
 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Successfully uploaded image to service: {service_name}"
-                    )
+                        f"Successfully uploaded image to service: {service_name}",
+                    ),
                 )
 
             except Service.DoesNotExist:
                 self.stdout.write(
-                    self.style.WARNING(f"Service not found: {service_name}")
+                    self.style.WARNING(f"Service not found: {service_name}"),
                 )
             except Exception as e:
                 self.stdout.write(
                     self.style.ERROR(
-                        f"Error uploading image to service '{service_name}': {str(e)}"
-                    )
+                        f"Error uploading image to service '{service_name}': {e!s}",
+                    ),
                 )
                 import traceback
 

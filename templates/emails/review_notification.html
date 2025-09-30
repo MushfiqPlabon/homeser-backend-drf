@@ -1,0 +1,22 @@
+{% extends 'emails/base.html' %}
+
+{% block content %}
+<h2>New Review for {{ service.name }}</h2>
+<p>Hi,</p>
+<p>A new review has been posted for the service "{{ service.name }}".</p>
+
+<h3>Review Details</h3>
+<ul>
+    <li><strong>Service:</strong> {{ service.name }}</li>
+    <li><strong>Reviewer:</strong> {{ user.get_full_name|default:user.username }}</li>
+    <li><strong>Rating:</strong> {{ review.rating }}/5</li>
+    <li><strong>Date:</strong> {{ review.created_at|date:"F d, Y" }}</li>
+</ul>
+
+<h3>Review Text</h3>
+<p>{{ review.text }}</p>
+
+<p><a href="{{ service_url }}" class="button">View Service</a></p>
+
+<p>This is an automated notification from {{ site_name }}.</p>
+{% endblock %}

@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import Payment, PaymentLog
 
 
@@ -10,10 +11,10 @@ class PaymentLogInline(admin.TabularInline):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ("transaction_id", "order", "amount", "status", "created_at")
-    list_filter = ("status", "currency", "created_at")
+    list_display = ("transaction_id", "order", "amount", "_status", "created")
+    list_filter = ("_status", "currency", "created")
     search_fields = ("transaction_id", "order__order_id", "val_id")
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created", "modified")
     inlines = [PaymentLogInline]
 
 

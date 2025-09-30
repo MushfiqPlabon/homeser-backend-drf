@@ -1,0 +1,26 @@
+{% extends 'emails/base.html' %}
+
+{% block content %}
+<h2>Payment Confirmation for Order #{{ order.id }}</h2>
+<p>Hi {{ user.first_name|default:user.username }},</p>
+<p>Your payment for order #{{ order.id }} has been successfully processed.</p>
+
+<h3>Payment Details</h3>
+<ul>
+    <li><strong>Order ID:</strong> {{ order.id }}</li>
+    <li><strong>Payment Date:</strong> {{ order.updated_at|date:"F d, Y" }}</li>
+    <li><strong>Amount Paid:</strong> BDT {{ order.total }}</li>
+    <li><strong>Payment Status:</strong> {{ order.get_payment_status_display }}</li>
+</ul>
+
+<h3>Order Summary</h3>
+<ul>
+{% for item in order.items.all %}
+    <li>{{ item.service.name }} - Quantity: {{ item.quantity }} - BDT {{ item.price }}</li>
+{% endfor %}
+</ul>
+
+<p><a href="{{ order_url }}" class="button">View Order Details</a></p>
+
+<p>Thank you for choosing {{ site_name }}!</p>
+{% endblock %}

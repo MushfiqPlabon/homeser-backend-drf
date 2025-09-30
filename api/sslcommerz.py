@@ -1,12 +1,18 @@
+import logging
 import uuid
-from django.conf import settings
-from payments.models import Payment, PaymentLog
-from sslcommerz_python_api import SSLCSession
 from decimal import Decimal
+
+from django.conf import settings
+from sslcommerz_python_api import SSLCSession
+
+from payments.models import Payment, PaymentLog
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class SSLCommerzService:
-    """Service class for SSLCOMMERZ payment gateway integration"""
+    """Service class for SSLCOMMERZ payment gateway integration with enhanced security"""
 
     def __init__(self):
         self.store_id = settings.SSLCOMMERZ_STORE_ID
@@ -28,8 +34,7 @@ class SSLCommerzService:
         )
 
     def create_session(self, order, customer_data):
-        """Create payment session with SSLCOMMERZ"""
-
+        """Create payment session with SSLCOMMERZ with enhanced security"""
         # Generate a unique transaction ID for SSLCOMMERZ.
         # It combines a prefix, the internal order ID, and a short UUID for uniqueness.
         tran_id = f"homeser_{order.order_id}_{uuid.uuid4().hex[:8]}"
@@ -73,12 +78,16 @@ class SSLCommerzService:
 
             # Log the session creation
             PaymentLog.objects.create(
-                payment=payment, action="session_created", data=result
+                payment=payment, action="session_created", data=result,
             )
 
             if result.get("status") == "SUCCESS":
                 payment.session_key = result.get("sessionkey", "")
                 payment.save()
+
+                logger.info(
+                    f"Payment session created successfully for order {order.id}",
+                )
 
                 return {
                     "success": True,
@@ -86,35 +95,39 @@ class SSLCommerzService:
                     "sessionkey": result.get("sessionkey"),
                     "transaction_id": tran_id,
                 }
-            else:
-                return {
-                    "success": False,
-                    "error": result.get(
-                        "failedreason", "Payment session creation failed"
-                    ),
-                }
+            logger.warning(
+                f"Payment session creation failed for order {order.id}: {result.get('failedreason')}",
+            )
+            return {
+                "success": False,
+                "error": result.get(
+                    "failedreason", "Payment session creation failed",
+                ),
+            }
 
-        except Exception as e:  # Catch generic exception for now. In production, consider catching more specific exceptions.
+        except Exception as e:
+            logger.error(f"Payment gateway error for order {order.id}: {e!s}")
             # Log the error
             PaymentLog.objects.create(
                 payment=payment if "payment" in locals() else None,
                 action="session_error",
                 data={"error": str(e)},
             )
-            return {"success": False, "error": f"Payment gateway error: {str(e)}"}
+            return {"success": False, "error": f"Payment gateway error: {e!s}"}
 
     def validate_payment(self, val_id, tran_id):
-        """Validate payment with SSLCOMMERZ"""
-
+        """Validate payment with SSLCOMMERZ with enhanced security validation"""
         try:
             # Validate the payment
             validation_response = self.sslcommerz_session.validate_payment(
-                val_id=val_id, tran_id=tran_id
+                val_id=val_id, tran_id=tran_id,
             )
 
             # Find payment record
             try:
-                payment = Payment.objects.get(transaction_id=tran_id)
+                payment = Payment.objects.select_related("order").get(
+                    transaction_id=tran_id,
+                )
                 payment.validation_response = validation_response
                 payment.val_id = val_id
 
@@ -125,34 +138,79 @@ class SSLCommerzService:
                     data=validation_response,
                 )
 
-                # Check if validation is successful
-                if (
-                    validation_response.get("status") == "VALID"
-                    and validation_response.get("tran_id") == tran_id
-                    and Decimal(str(validation_response.get("amount", 0)))
-                    == Decimal(str(payment.amount))
-                ):
-                    payment.status = "completed"
-                    payment.bank_tran_id = validation_response.get("bank_tran_id", "")
-                    payment.card_type = validation_response.get("card_type", "")
-                    payment.card_no = validation_response.get("card_no", "")
-                    payment.save()
-
-                    # Update order status
-                    order = payment.order
-                    order.payment_status = "paid"
-                    order.status = "confirmed"
-                    order.transaction_id = tran_id
-                    order.save()
-
-                    return {"success": True, "payment": payment, "order": order}
-                else:
+                # Security validation checks
+                # 1. Check if validation status is valid
+                if validation_response.get("status") != "VALID":
+                    logger.warning(
+                        f"Payment validation failed for transaction {tran_id}: Invalid status",
+                    )
                     payment.status = "failed"
                     payment.save()
-                    return {"success": False, "error": "Payment validation failed"}
+                    return {
+                        "success": False,
+                        "error": "Payment validation failed - invalid status",
+                    }
+
+                # 2. Check if transaction ID matches
+                if validation_response.get("tran_id") != tran_id:
+                    logger.warning(
+                        f"Payment validation failed for transaction {tran_id}: Transaction ID mismatch",
+                    )
+                    payment.status = "failed"
+                    payment.save()
+                    return {
+                        "success": False,
+                        "error": "Payment validation failed - transaction ID mismatch",
+                    }
+
+                # 3. Check if amount matches
+                validation_amount = Decimal(str(validation_response.get("amount", 0)))
+                payment_amount = Decimal(str(payment.amount))
+                if validation_amount != payment_amount:
+                    logger.warning(
+                        f"Payment validation failed for transaction {tran_id}: Amount mismatch ({validation_amount} vs {payment_amount})",
+                    )
+                    payment.status = "failed"
+                    payment.save()
+                    return {
+                        "success": False,
+                        "error": "Payment validation failed - amount mismatch",
+                    }
+
+                # 4. Check if currency matches
+                if validation_response.get("currency") != payment.currency:
+                    logger.warning(
+                        f"Payment validation failed for transaction {tran_id}: Currency mismatch",
+                    )
+                    payment.status = "failed"
+                    payment.save()
+                    return {
+                        "success": False,
+                        "error": "Payment validation failed - currency mismatch",
+                    }
+
+                # All validations passed
+                payment.status = "completed"
+                payment.bank_tran_id = validation_response.get("bank_tran_id", "")
+                payment.card_type = validation_response.get("card_type", "")
+                payment.card_no = validation_response.get("card_no", "")
+                payment.save()
+
+                # Update order status
+                order = payment.order
+                order.payment_status = "paid"
+                order.status = "confirmed"
+                order.transaction_id = tran_id
+                order.save()
+
+                logger.info(f"Payment validation successful for transaction {tran_id}")
+
+                return {"success": True, "payment": payment, "order": order}
 
             except Payment.DoesNotExist:
+                logger.error(f"Payment record not found for transaction {tran_id}")
                 return {"success": False, "error": "Payment record not found"}
 
-        except Exception as e:  # Catch generic exception for now. In production, consider catching more specific exceptions.
-            return {"success": False, "error": f"Validation error: {str(e)}"}
+        except Exception as e:
+            logger.error(f"Payment validation error for transaction {tran_id}: {e!s}")
+            return {"success": False, "error": f"Validation error: {e!s}"}
