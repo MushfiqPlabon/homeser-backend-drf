@@ -1,9 +1,5 @@
-// vercel.json
-// This file configures how the HomeSer Django backend is deployed on Vercel.
-// It specifies the build process (using @vercel/python) and defines routing rules
-// to serve static files and direct all other requests to the Django WSGI application.
 {
-  "buildCommand": "python3 -m pip install uv && uv sync --locked && python manage.py collectstatic --noinput && python manage.py migrate",
+  "buildCommand": "python3 -m pip install uv && uv sync --locked && uv run manage.py collectstatic --noinput && uv run manage.py migrate",
   "builds": [
     {
       "src": "homeser/wsgi.py",
