@@ -1,5 +1,5 @@
 {
-  "buildCommand": "python3 -m pip install uv && uv sync --locked && uv run manage.py collectstatic --noinput && uv run manage.py migrate",
+  "buildCommand": "python3 -m pip install uv && uv sync && uv run manage.py collectstatic --noinput && uv run manage.py migrate",
   "builds": [
     {
       "src": "homeser/wsgi.py",
