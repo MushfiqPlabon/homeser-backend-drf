@@ -12,7 +12,7 @@ django-cachalot==2.8.0
 django-cache-machine==1.2.0
 django-cloudinary-storage==0.3.0
 django-cors-headers==4.3.1
-django-environ==0.11.2
+python-decouple==3.8
 django-filter==25.1
 django-fsm==3.0.0
 django-guardian==3.2.0
@@ -48,7 +48,6 @@ pydantic==2.11.9
 pydantic-core==2.33.2
 pyjwt==2.10.1
 python-decouple==3.8
-python-dotenv==1.1.1
 pytz==2025.2
 pyyaml==6.0.2
 redis==6.4.0
