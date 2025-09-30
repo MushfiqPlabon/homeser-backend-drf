@@ -17,6 +17,8 @@ class RedisBloomService:
         """Get or create RedisBloom client
         """
         if cls._client is None:
+            if getattr(settings, "VERCEL_URL", None):
+                return None
             try:
                 redis_url = getattr(
                     settings, "REDISBLOOM_HOST", "redis://127.0.0.1:6379",
