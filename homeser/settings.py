@@ -208,21 +208,28 @@ DEFAULT_FROM_EMAIL = config.get("DEFAULT_FROM_EMAIL", "webmaster@localhost")
 ADMIN_EMAIL = config.get("ADMIN_EMAIL", DEFAULT_FROM_EMAIL)
 
 # Cache Configuration
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+if VERCEL_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": config.get("REDIS_URL", "redis://127.0.0.1:6379/1"),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            },
         },
-    },
-}
+    }
 
 # Cache timeout from environment or default to 15 minutes
 CACHE_TTL = int(config.get("CACHE_TTL", "900"))
 
 # Cachalot settings to automatically cache and invalidate ORM queries
-CACHALOT_ENABLED = True
+CACHALOT_ENABLED = not VERCEL_URL
 CACHALOT_CACHE = "default"
 # Tables that should never be cached (useful for frequently updated tables)
 CACHALOT_UNCACHABLE_TABLES = [
@@ -240,7 +247,8 @@ CACHALOT_ONLY_CACHABLE_TABLES = [
 # CACHALOT_TIMEOUT = 300  # 5 minutes
 
 # Redis configuration for direct connection
-REDIS_URL = config.get("REDIS_URL", "redis://127.0.0.1:6379/1")
+if not VERCEL_URL:
+    REDIS_URL = config.get("REDIS_URL", "redis://127.0.0.1:6379/1")
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = config.get(
@@ -419,4 +427,5 @@ if config.get("SENTRY_DSN"):
 # }
 
 # RedisBloom Configuration
-REDISBLOOM_HOST = config.get("REDISBLOOM_HOST", "redis://127.0.0.1:6379")
+if not VERCEL_URL:
+    REDISBLOOM_HOST = config.get("REDISBLOOM_HOST", "redis://127.0.0.1:6379")
