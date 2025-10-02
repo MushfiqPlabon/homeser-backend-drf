@@ -46,8 +46,7 @@ validate_regex_pattern = RegexValidator
 
 # Status tracking using django-fsm (simplified version)
 class StatusTrackedModelMixin:
-    """Mixin that adds status tracking to models using django-fsm.
-    """
+    """Mixin that adds status tracking to models using django-fsm."""
 
     STATUS_CHOICES = [
         ("draft", "Draft"),

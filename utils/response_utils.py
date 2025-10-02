@@ -39,7 +39,10 @@ def format_success_response(
 
 
 def format_error_response(
-    error_code, message, details=None, status_code=status.HTTP_400_BAD_REQUEST,
+    error_code,
+    message,
+    details=None,
+    status_code=status.HTTP_400_BAD_REQUEST,
 ):
     """Format a standardized error response.
 
@@ -69,7 +72,11 @@ def format_error_response(
 
 
 def format_paginated_response(
-    items, page, per_page, total, message="Items retrieved successfully",
+    items,
+    page,
+    per_page,
+    total,
+    message="Items retrieved successfully",
 ):
     """Format a standardized paginated response.
 
@@ -97,5 +104,7 @@ def format_paginated_response(
     }
 
     return format_success_response(
-        data=data, message=message, meta={"pagination": data["pagination"]},
+        data=data,
+        message=message,
+        meta={"pagination": data["pagination"]},
     )

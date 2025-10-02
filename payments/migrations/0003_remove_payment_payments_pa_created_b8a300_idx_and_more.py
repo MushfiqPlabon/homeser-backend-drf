@@ -101,13 +101,15 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="payment",
             index=models.Index(
-                fields=["created"], name="payments_pa_created_708743_idx",
+                fields=["created"],
+                name="payments_pa_created_708743_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="payment",
             index=models.Index(
-                fields=["_status", "created"], name="payments_pa_status_540537_idx",
+                fields=["_status", "created"],
+                name="payments_pa_status_540537_idx",
             ),
         ),
     ]

@@ -88,5 +88,7 @@ class BloomFilter:
 
 # Global instance for service use
 service_bloom_filter = BloomFilter(
-    capacity=100000, error_rate=0.001, redis_key="homeser_service_bloom",
+    capacity=100000,
+    error_rate=0.001,
+    redis_key="homeser_service_bloom",
 )

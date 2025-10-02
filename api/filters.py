@@ -10,7 +10,8 @@ class ServiceFilter(filters.FilterSet):
 
     category = filters.NumberFilter(field_name="category__id")
     category_name = filters.CharFilter(
-        field_name="category__name", lookup_expr="icontains",
+        field_name="category__name",
+        lookup_expr="icontains",
     )
     min_price = filters.NumberFilter(field_name="price", lookup_expr="gte")
     max_price = filters.NumberFilter(field_name="price", lookup_expr="lte")
@@ -54,7 +55,8 @@ class OrderFilter(filters.FilterSet):
     status = filters.CharFilter(field_name="_status")
     payment_status = filters.CharFilter(field_name="_payment_status")
     customer_name = filters.CharFilter(
-        field_name="customer_name", lookup_expr="icontains",
+        field_name="customer_name",
+        lookup_expr="icontains",
     )
     order_id = filters.CharFilter(field_name="order_id", lookup_expr="icontains")
     date_from = filters.DateTimeFilter(field_name="created", lookup_expr="gte")

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from orders.models import Order
 from services.models import Service
 
-from .base_service import BaseService
+from .base_service import BaseService, log_service_method
 
 # Import dramatiq for background tasks
 
@@ -46,9 +46,6 @@ class CartItemIn(BaseModel):
     price: str | None = None
 
 
-from .base_service import log_service_method # Add this import
-
-
 class CartSyncIn(BaseModel):
     items: list[CartItemIn]
     user_id: int
@@ -74,7 +71,7 @@ class CartService(BaseService):
         if not user.is_authenticated:
             # Return empty cart for anonymous users
             return {
-                "id": None, # Will be set when converted to Order model
+                "id": None,  # Will be set when converted to Order model
                 "user_id": None,
                 "items": [],
                 "created_at": None,
@@ -89,19 +86,18 @@ class CartService(BaseService):
         # Check if user is authenticated
         if not user.is_authenticated:
             return None
-        
+
         try:
             cart = Order.objects.get(user=user, _status="draft")
             return cart
         except Order.DoesNotExist:
             return None
+
     @classmethod
     @log_service_method
     def add_to_cart(cls, user, service_id, quantity):
         """Add service to cart using lock-free implementation."""
-        # ... logic ...
-        return order
-
+        user_id = user.id
         if not cls._is_redis_available():
             logger.debug(
                 f"Redis not available for user {user_id}, adding to cart in database",
@@ -141,7 +137,7 @@ class CartService(BaseService):
         from django.utils import timezone
 
         now = timezone.now().isoformat()
-        if not cart["created_at"]:
+        if not cart.get("created_at"):
             cart["created_at"] = now
         cart["updated_at"] = now
 
@@ -216,8 +212,68 @@ class CartService(BaseService):
     @log_service_method
     def update_quantity(cls, user, service_id, quantity):
         """Update cart item quantity using lock-free implementation."""
-        # ... logic ...
-        return order
+        user_id = user.id
+        if not cls._is_redis_available():
+            logger.debug(
+                f"Redis not available for user {user_id}, updating cart in database",
+            )
+            return cls._update_cart_in_database(user_id, service_id, quantity)
+
+        cart_key = cls._get_cart_key(user_id)
+        try:
+            cart = cls.get_cart(user_id)
+        except Exception as e:
+            logger.error(f"Error getting cart for user {user_id}: {e!s}")
+            return cls._update_cart_in_database(user_id, service_id, quantity)
+
+        item_updated = False
+        for item in cart["items"]:
+            if item["service_id"] == service_id:
+                item["quantity"] = quantity
+                item_updated = True
+                break
+
+        if not item_updated:
+            logger.warning(
+                f"Item {service_id} not found in cart for user {user_id} to update quantity"
+            )
+            # If item not found, add it with the requested quantity
+            try:
+                service = Service.objects.get(id=service_id, is_active=True)
+                cart["items"].append(
+                    {
+                        "service_id": service_id,
+                        "quantity": quantity,
+                        "price": str(service.price),
+                    },
+                )
+            except Service.DoesNotExist:
+                raise ValueError("Service not found or not active")
+            except Exception as e:
+                logger.error(f"Error getting service {service_id}: {e!s}")
+                raise ValueError("Error retrieving service information")
+
+        from django.utils import timezone
+
+        cart["updated_at"] = timezone.now().isoformat()
+
+        try:
+            redis_client.setex(cart_key, cls.CART_TTL, json.dumps(cart))
+            return cart
+        except (
+            redis.exceptions.ConnectionError,
+            redis.exceptions.TimeoutError,
+            redis.exceptions.RedisError,
+        ) as e:
+            logger.warning(
+                f"Redis error while updating cart for user {user_id}: {e!s}",
+            )
+            return cls._update_cart_in_database(user_id, service_id, quantity)
+        except Exception as e:
+            logger.error(
+                f"Unexpected error while updating cart for user {user_id}: {e!s}",
+            )
+            return cls._update_cart_in_database(user_id, service_id, quantity)
 
     @classmethod
     @log_service_method
@@ -228,8 +284,7 @@ class CartService(BaseService):
 
     @classmethod
     def _clear_cart_in_database(cls, user_id):
-        """Cart = Order.objects.get(user_id=user_id, status="cart")
-        """
+        """Cart = Order.objects.get(user_id=user_id, status="cart")"""
         try:
             cart = Order.objects.get(user_id=user_id, status="cart")
             cart.items.all().delete()
@@ -241,6 +296,38 @@ class CartService(BaseService):
                 f"Database error while clearing cart for user {user_id}: {e!s}",
             )
             raise Exception(f"Failed to clear cart: {e!s}")
+
+    @classmethod
+    def _update_cart_in_database(cls, user_id, service_id, quantity):
+        """Update cart item quantity in the database."""
+        try:
+            # Get the cart order for the user
+            cart_order = Order.objects.get(user_id=user_id, _status="draft")
+
+            # Get the cart item
+            from orders.models import OrderItem
+
+            cart_item = OrderItem.objects.get(order=cart_order, service_id=service_id)
+
+            # Update the quantity
+            cart_item.quantity = quantity
+            cart_item.save()
+
+            # Return the updated cart
+            return cls._get_cart_from_database(cart_order.user)
+        except Order.DoesNotExist:
+            logger.error(f"Cart not found for user {user_id}")
+            raise ValueError("Cart does not exist for the user")
+        except OrderItem.DoesNotExist:
+            logger.error(
+                f"Cart item with service {service_id} not found for user {user_id}"
+            )
+            raise ValueError("Cart item does not exist")
+        except Exception as e:
+            logger.error(
+                f"Database error while updating cart for user {user_id}: {e!s}"
+            )
+            raise Exception(f"Failed to update cart: {e!s}")
 
     @classmethod
     def _is_redis_available(cls):
@@ -255,13 +342,13 @@ class CartService(BaseService):
         if not user.is_authenticated:
             # Return empty cart for anonymous users
             return {
-                "id": None, # Will be set when converted to Order model
+                "id": None,  # Will be set when converted to Order model
                 "user_id": None,
                 "items": [],
                 "created_at": None,
                 "updated_at": None,
             }
-        
+
         cart_key = cls._get_cart_key(user.id)
         if cls._is_redis_available():
             try:
@@ -269,8 +356,13 @@ class CartService(BaseService):
                 if cart_data:
                     cart = json.loads(cart_data)
                     return cart
-            except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
-                logger.warning(f"Redis error for user {user.id}: {e!s}. Falling back to database.")
+            except (
+                redis.exceptions.ConnectionError,
+                redis.exceptions.TimeoutError,
+            ) as e:
+                logger.warning(
+                    f"Redis error for user {user.id}: {e!s}. Falling back to database."
+                )
 
         # If not in Redis or Redis is unavailable, get from DB and sync to Redis
         order_instance = cls._get_cart_from_database(user)
@@ -283,24 +375,33 @@ class CartService(BaseService):
                     {
                         "service_id": item.service.id,
                         "quantity": item.quantity,
-                        "price": str(item.unit_price), # Convert Decimal to string
+                        "price": str(item.unit_price),  # Convert Decimal to string
                     }
                     for item in order_instance.items.all()
                 ],
-                "created_at": order_instance.created.isoformat() if order_instance.created else None,
-                "updated_at": order_instance.modified.isoformat() if order_instance.modified else None,
+                "created_at": order_instance.created.isoformat()
+                if order_instance.created
+                else None,
+                "updated_at": order_instance.modified.isoformat()
+                if order_instance.modified
+                else None,
             }
             # Sync to Redis if available
             if cls._is_redis_available():
                 try:
                     redis_client.setex(cart_key, cls.CART_TTL, json.dumps(cart_data))
-                except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
-                    logger.warning(f"Redis error syncing cart for user {user.id}: {e!s}. Proceeding without Redis sync.")
-            return cart_data # Return the dictionary
+                except (
+                    redis.exceptions.ConnectionError,
+                    redis.exceptions.TimeoutError,
+                ) as e:
+                    logger.warning(
+                        f"Redis error syncing cart for user {user.id}: {e!s}. Proceeding without Redis sync."
+                    )
+            return cart_data  # Return the dictionary
         else:
             # If no cart in DB, create a new empty one (as a dictionary)
             return {
-                "id": None, # Will be set when converted to Order model
+                "id": None,  # Will be set when converted to Order model
                 "user_id": user.id,
                 "items": [],
                 "created_at": None,
@@ -314,19 +415,68 @@ class CartService(BaseService):
         # Check if user is authenticated
         if not user.is_authenticated:
             return None
-        
+
         try:
             # Attempt to get an existing draft order (cart) for the user
             order = Order.objects.get(user=user, _status="draft")
             return order
         except Order.DoesNotExist:
             # If no draft order exists, create a new one
-            order = Order.objects.create(user=user, _status="draft", _payment_status="unpaid")
+            order = Order.objects.create(
+                user=user, _status="draft", _payment_status="unpaid"
+            )
             return order
 
     @classmethod
     @log_service_method
     def sync_to_database(cls, user):
         """Sync cart from Redis to database."""
-        # ... logic ...
-        return order
+        if not cls._is_redis_available():
+            logger.debug(f"Redis not available for user {user.id}, cannot sync")
+            return cls._get_cart_from_database(user)
+
+        cart_key = cls._get_cart_key(user.id)
+        try:
+            cart_data = redis_client.get(cart_key)
+            if not cart_data:
+                # No cart in Redis, return database version
+                return cls._get_cart_from_database(user)
+
+            redis_cart = json.loads(cart_data)
+
+            # Get or create the order in database
+            cart_order, created = Order.objects.get_or_create(
+                user=user, _status="draft", defaults={"_payment_status": "unpaid"}
+            )
+
+            # Get cart items from Redis
+            redis_items = redis_cart.get("items", [])
+
+            # Clear existing items if this is not a new order
+            if not created:
+                from orders.models import OrderItem
+
+                cart_order.items.all().delete()
+
+            # Add items from Redis to database
+            for item in redis_items:
+                service = Service.objects.get(id=item["service_id"])
+                OrderItem.objects.create(
+                    order=cart_order,
+                    service=service,
+                    quantity=item["quantity"],
+                    unit_price=Decimal(item["price"]),  # noqa: F821
+                )
+
+            # Update order timestamps
+            from django.utils import timezone
+
+            cart_order.modified = timezone.now()
+            cart_order.save()
+
+            # Return the updated cart
+            return redis_cart
+        except Exception as e:
+            logger.error(f"Error syncing cart to database for user {user.id}: {e!s}")
+            # Return database version if sync fails
+            return cls._get_cart_from_database(user)

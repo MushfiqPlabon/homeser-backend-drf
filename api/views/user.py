@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
@@ -39,7 +39,8 @@ class ProfileView(UnifiedBaseGenericView, generics.RetrieveUpdateAPIView):
         try:
             # Use UserService to update profile
             profile = self.get_service().update_user_profile(
-                self.request.user, serializer.validated_data,
+                self.request.user,
+                serializer.validated_data,
             )
             serializer.instance = profile
             return Response(serializer.data)
@@ -75,15 +76,13 @@ class AdminPromoteUserView(UnifiedBaseGenericView, generics.CreateAPIView):
             return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
 
 
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-
 @extend_schema(
     parameters=[
         OpenApiParameter(
             name="id",
             type=int,
             location=OpenApiParameter.PATH,
-            description="A unique integer value identifying this user."
+            description="A unique integer value identifying this user.",
         )
     ]
 )
@@ -144,7 +143,9 @@ class AdminUserViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
         try:
             # Use UserService to update user
             user = self.get_service().update_user(
-                instance.id, serializer.validated_data, request.user,
+                instance.id,
+                serializer.validated_data,
+                request.user,
             )
             serializer.instance = user
             return Response(serializer.data)

@@ -4,33 +4,42 @@ Consolidated from previous separate files to eliminate redundancy.
 """
 
 import logging
-from django.conf import settings # Added this import
+from django.conf import settings  # Added this import
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from guardian.shortcuts import assign_perm, remove_perm
-from rest_framework.exceptions import PermissionDenied
+from guardian.shortcuts import assign_perm
 from functools import wraps
 
 logger = logging.getLogger(__name__)
 
+
 def log_service_method(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        cls_name = args[0].__name__ if isinstance(args[0], type) else args[0].__class__.__name__
+        cls_name = (
+            args[0].__name__
+            if isinstance(args[0], type)
+            else args[0].__class__.__name__
+        )
         method_name = func.__name__
-        logger.info(f"Entering {cls_name}.{method_name} with args: {args[1:]}, kwargs: {kwargs}")
+        logger.info(
+            f"Entering {cls_name}.{method_name} with args: {args[1:]}, kwargs: {kwargs}"
+        )
         try:
             result = func(*args, **kwargs)
             logger.info(f"Exiting {cls_name}.{method_name} successfully.")
             return result
         except Exception as e:
-            logger.error(f"Exiting {cls_name}.{method_name} with error: {e}", exc_info=True)
+            logger.error(
+                f"Exiting {cls_name}.{method_name} with error: {e}", exc_info=True
+            )
             raise
+
     return wrapper
+
 
 class BaseService:
     """Base service class with common functionality for all services."""
-
 
     model = None  # Should be overridden by subclasses
     cache_timeout = getattr(settings, "CACHE_TTL", 300)  # Default 5 minutes
@@ -45,9 +54,10 @@ class BaseService:
     @classmethod
     def _require_staff_permission(cls, user):
         """Helper method to check if the user is staff. Raises PermissionError if not."""
-        if not user.is_staff:
-            raise PermissionError("Only staff users have permission to perform this action.")
-
+        if user is None or not user.is_authenticated or not user.is_staff:
+            raise PermissionError(
+                "Only staff users have permission to perform this action."
+            )
 
     @classmethod
     def get_all(cls):
@@ -177,7 +187,22 @@ class BaseService:
             ValueError: If validation fails
 
         """
-        ValidationService.validate_data(data, validation_rules)
+        # Perform validation based on the provided rules
+        for field, rules in validation_rules.items():
+            if field in data:
+                value = data[field]
+                if "required" in rules and rules["required"] and not value:
+                    raise ValueError(f"{field} is required")
+                if "type" in rules and not isinstance(value, rules["type"]):
+                    raise TypeError(f"{field} must be of type {rules['type'].__name__}")
+                if "min_length" in rules and len(value) < rules["min_length"]:
+                    raise ValueError(
+                        f"{field} must have at least {rules['min_length']} characters"
+                    )
+                if "max_length" in rules and len(value) > rules["max_length"]:
+                    raise ValueError(
+                        f"{field} must have at most {rules['max_length']} characters"
+                    )
 
     @classmethod
     def _common_permission_check(cls, instance, user, action):
@@ -240,8 +265,7 @@ class BaseService:
 
 
 class ServiceOperationStrategy:
-    """Abstract base class for service operation strategies.
-    """
+    """Abstract base class for service operation strategies."""
 
     def execute(self, service_class, *args, **kwargs):
         """Execute the service operation.
@@ -259,8 +283,7 @@ class ServiceOperationStrategy:
 
 
 class CreateStrategy(ServiceOperationStrategy):
-    """Strategy for creating instances.
-    """
+    """Strategy for creating instances."""
 
     def execute(self, service_class, data, user=None):
         """Create a new instance.
@@ -278,8 +301,7 @@ class CreateStrategy(ServiceOperationStrategy):
 
 
 class UpdateStrategy(ServiceOperationStrategy):
-    """Strategy for updating instances.
-    """
+    """Strategy for updating instances."""
 
     def execute(self, service_class, obj_id, data, user=None):
         """Update an existing instance.
@@ -298,8 +320,7 @@ class UpdateStrategy(ServiceOperationStrategy):
 
 
 class DeleteStrategy(ServiceOperationStrategy):
-    """Strategy for deleting instances.
-    """
+    """Strategy for deleting instances."""
 
     def execute(self, service_class, obj_id, user=None):
         """Delete an instance.
@@ -317,8 +338,7 @@ class DeleteStrategy(ServiceOperationStrategy):
 
 
 class ServiceContext:
-    """Context class for service operation strategies.
-    """
+    """Context class for service operation strategies."""
 
     def __init__(self, strategy: ServiceOperationStrategy):
         """Initialize the context with a strategy.
@@ -361,7 +381,7 @@ class PermissionService(BaseService):
     @classmethod
     def _check_permissions(cls, user, instance=None):
         """Check if user has required permissions"""
-        if not user:
+        if not user or not user.is_authenticated:
             raise PermissionError("Authentication required")
 
         # Check if user is admin
@@ -383,8 +403,7 @@ class PermissionService(BaseService):
 
 
 class ServiceInterface:
-    """Interface for all service classes to ensure consistent API.
-    """
+    """Interface for all service classes to ensure consistent API."""
 
     @classmethod
     def create(cls, data, user=None):
@@ -413,8 +432,7 @@ class ServiceInterface:
 
 
 class CRUDService(ServiceInterface, BaseService):
-    """Service class that implements the full CRUD interface.
-    """
+    """Service class that implements the full CRUD interface."""
 
     @classmethod
     def create(cls, data, user=None):

@@ -1,2 +1,1 @@
-"""API utilities package for the HomeSer platform.
-"""
+"""API utilities package for the HomeSer platform."""

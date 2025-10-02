@@ -91,7 +91,12 @@ class APIBenchmark:
         }
 
     def benchmark_concurrent(
-        self, endpoint, method="GET", data=None, concurrent_requests=5, iterations=10,
+        self,
+        endpoint,
+        method="GET",
+        data=None,
+        concurrent_requests=5,
+        iterations=10,
     ):
         """Benchmark an endpoint with concurrent requests.
 

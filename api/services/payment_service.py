@@ -12,7 +12,7 @@ from utils.email.email_service import EmailService
 
 from .base_service import BaseService
 
-from .base_service import log_service_method # Add this import
+from .base_service import log_service_method  # Add this import
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class PaymentService(BaseService):
             validated_input = PaymentWebhookIn(val_id=val_id, tran_id=tran_id)
             val_id = validated_input.val_id
             tran_id = validated_input.tran_id
-        except ValidationError as e:
+        except ValidationError:
             # The decorator will log the exception, but we still need to return the specific error response
             return {"status": "failed", "error": "Invalid payload parameters"}
 
@@ -186,7 +186,6 @@ class PaymentService(BaseService):
         """Log the refund and send notifications."""
         # ... logic ...
 
-
     @classmethod
     @log_service_method
     def initiate_refund(cls, payment_id, refund_amount=None, reason="", user=None):
@@ -208,7 +207,8 @@ class PaymentService(BaseService):
 
             # Validate refund requirements
             validation_result = cls._validate_refund_requirements(
-                payment, refund_amount,
+                payment,
+                refund_amount,
             )
             if not validation_result["success"]:
                 return validation_result
@@ -277,7 +277,7 @@ class PaymentService(BaseService):
             # Send dispute notification emails
             try:
                 EmailService.send_dispute_notification_email(order, dispute_reason)
-            except Exception as e:
+            except Exception:
                 # Manual logger.error removed
                 pass
 
@@ -338,16 +338,17 @@ class PaymentService(BaseService):
         # Group by status
         try:
             status_breakdown = payments.values("status").annotate(count=Count("id"))
-        except Exception as e:
+        except Exception:
             # Manual logger.warning removed, decorator handles it
             status_breakdown = []
 
         # Group by currency
         try:
             currency_breakdown = payments.values("currency").annotate(
-                count=Count("id"), total_amount=Sum("amount"),
+                count=Count("id"),
+                total_amount=Sum("amount"),
             )
-        except Exception as e:
+        except Exception:
             # Manual logger.warning removed, decorator handles it
             currency_breakdown = []
 
@@ -359,7 +360,7 @@ class PaymentService(BaseService):
                 .annotate(count=Count("id"), total_amount=Sum("amount"))
                 .order_by("date")
             )
-        except Exception as e:
+        except Exception:
             # Manual logger.warning removed, decorator handles it
             daily_trend = []
 
@@ -371,7 +372,7 @@ class PaymentService(BaseService):
                 .values("order__payment_method")
                 .annotate(count=Count("id"))
             )
-        except Exception as e:
+        except Exception:
             # Manual logger.warning removed, decorator handles it
             method_breakdown = []
 
@@ -403,7 +404,8 @@ class PaymentService(BaseService):
 
             # Filter payments by date range
             payments = Payment.objects.filter(
-                created_at__gte=start_date, created_at__lte=end_date,
+                created_at__gte=start_date,
+                created_at__lte=end_date,
             )
 
             # Calculate basic statistics

@@ -44,7 +44,10 @@ class ServiceReviewsView(UnifiedBaseGenericView, generics.ListCreateAPIView):
 
         try:
             review = self.get_service().create_service_review(
-                service_id, self.request.user, rating, text,
+                service_id,
+                self.request.user,
+                rating,
+                text,
             )
             serializer.instance = review
         except Exception as e:
@@ -73,7 +76,11 @@ class UserReviewsView(UnifiedBaseGenericView, generics.ListAPIView):
         if getattr(self, "swagger_fake_view", False):
             # Return an empty queryset when generating schema
             return Review.objects.none()
-        return Review.objects.filter(user=self.request.user).select_related("service").order_by("-created_at")
+        return (
+            Review.objects.filter(user=self.request.user)
+            .select_related("service")
+            .order_by("-created_at")
+        )
 
 
 class ReviewDeleteView(UnifiedBaseGenericView, generics.DestroyAPIView):
@@ -130,7 +137,9 @@ class AdminReviewViewSet(UnifiedBaseViewSet):
         try:
             # Use ReviewService to update review
             review = self.get_service().update_review(
-                instance.id, serializer.validated_data, request.user,
+                instance.id,
+                serializer.validated_data,
+                request.user,
             )
             serializer.instance = review
             return Response(serializer.data)

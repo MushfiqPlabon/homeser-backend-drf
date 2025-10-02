@@ -86,7 +86,8 @@ class CategoryViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
         try:
             # Use CategoryService to create category
             category = self.get_service().create_category(
-                serializer.validated_data, request.user,
+                serializer.validated_data,
+                request.user,
             )
             serializer.instance = category
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -109,7 +110,9 @@ class CategoryViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
         try:
             # Use CategoryService to update category
             category = self.get_service().update_category(
-                instance.id, serializer.validated_data, request.user,
+                instance.id,
+                serializer.validated_data,
+                request.user,
             )
             serializer.instance = category
             return Response(serializer.data)

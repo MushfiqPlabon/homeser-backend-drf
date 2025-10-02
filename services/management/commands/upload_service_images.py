@@ -15,7 +15,11 @@ class Command(BaseCommand):
             "--image-dir",
             type=str,
             default=os.path.join(
-                settings.BASE_DIR, "..", "homeser-frontend-react", "public", "images",
+                settings.BASE_DIR,
+                "..",
+                "homeser-frontend-react",
+                "public",
+                "images",
             ),
             help="Directory containing service images",
         )

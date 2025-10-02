@@ -178,7 +178,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="service",
             index=models.Index(
-                fields=["is_active", "created"], name="services_se_is_acti_e616c6_idx",
+                fields=["is_active", "created"],
+                name="services_se_is_acti_e616c6_idx",
             ),
         ),
     ]

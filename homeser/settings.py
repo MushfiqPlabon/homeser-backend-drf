@@ -2,23 +2,92 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from decouple import Config, RepositoryEmpty
+from decouple import Config, RepositoryEnv, RepositoryEmpty
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load configuration from environment variables (works with Vercel)
-# RepositoryEmpty means we only load from system environment variables, not .env files
-config = Config(RepositoryEmpty())
+# Load configuration with .env file taking precedence over system environment variables
+# Check if .env file exists in BASE_DIR
+env_file_path = BASE_DIR / ".env"
+if env_file_path.exists():
+    # To ensure .env file takes precedence over environment variables,
+    # we'll create a custom config class that checks the .env file first
+    from decouple import RepositoryEnv, RepositoryEmpty
+    import os
+
+    class EnvFileFirstConfig:
+        def __init__(self, env_file_path):
+            self.env_repo = RepositoryEnv(str(env_file_path))
+            self.sys_repo = RepositoryEmpty()
+
+        def __call__(self, key, default=None, cast=None):
+            # First try to get from .env file
+            try:
+                value = self.env_repo[key]
+                if value is not None:
+                    if cast is not None:
+                        if cast is bool:
+                            value = value.lower() in [
+                                "1",
+                                "yes",
+                                "true",
+                                "on",
+                                "y",
+                                "t",
+                            ]
+                        elif cast is int:
+                            value = int(value)
+                        elif cast is float:
+                            value = float(value)
+                        else:
+                            value = cast(value)
+                    return value
+            except KeyError:
+                pass
+
+            # Then try system environment
+            try:
+                value = self.sys_repo[key]
+                if value is not None:
+                    if cast is not None:
+                        if cast is bool:
+                            value = value.lower() in [
+                                "1",
+                                "yes",
+                                "true",
+                                "on",
+                                "y",
+                                "t",
+                            ]
+                        elif cast is int:
+                            value = int(value)
+                        elif cast is float:
+                            value = float(value)
+                        else:
+                            value = cast(value)
+                    return value
+            except KeyError:
+                pass
+
+            # Return default if both sources fail
+            return default
+
+    config = EnvFileFirstConfig(str(env_file_path))
+else:
+    # Load only from system environment variables
+    config = Config(RepositoryEmpty())
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-me-in-production")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 # Control whether to populate advanced structures on startup
-POPULATE_ADVANCED_STRUCTURES_ON_STARTUP = config('POPULATE_ADVANCED_STRUCTURES_ON_STARTUP', default=False, cast=bool)
+POPULATE_ADVANCED_STRUCTURES_ON_STARTUP = config(
+    "POPULATE_ADVANCED_STRUCTURES_ON_STARTUP", default=False, cast=bool
+)
 
 # Vercel deployment settings
 VERCEL_URL = os.environ.get("VERCEL_URL")
@@ -26,7 +95,9 @@ if VERCEL_URL:
     ALLOWED_HOSTS = [VERCEL_URL, "localhost", "127.0.0.1", ".vercel.app"]
     CSRF_TRUSTED_ORIGINS = [f"https://{VERCEL_URL}", "https://*.vercel.app"]
 else:
-    ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver').split(",")
+    ALLOWED_HOSTS = config(
+        "ALLOWED_HOSTS", default="localhost,127.0.0.1,testserver"
+    ).split(",")
 
 
 # Application definition
@@ -41,6 +112,7 @@ INSTALLED_APPS = [
     # Third party apps
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",  # Required for refresh token rotation
     "corsheaders",
     "cloudinary_storage",
     "cloudinary",
@@ -107,11 +179,11 @@ DATABASES = {
 
 # Check if we have individual database credentials
 # Explicitly check for empty strings since python-dotenv returns None for missing keys
-DB_NAME = config('dbname', default=None)
-DB_USER = config('user', default=None)
-DB_PASSWORD = config('password', default=None)
-DB_HOST = config('host', default=None)
-DB_PORT = config('port', default=None)
+DB_NAME = config("dbname", default=None)
+DB_USER = config("user", default=None)
+DB_PASSWORD = config("password", default=None)
+DB_HOST = config("host", default=None)
+DB_PORT = config("port", default=None)
 
 # Only use PostgreSQL if ALL database credentials are provided and not empty/null
 # This ensures we don't accidentally try to connect to PostgreSQL with partial credentials
@@ -125,11 +197,11 @@ if all(cred is not None and str(cred).strip() != "" for cred in DB_CREDENTIALS):
         "HOST": DB_HOST,
         "PORT": DB_PORT,
     }
-elif config('DATABASE_URL', default=None):
+elif config("DATABASE_URL", default=None):
     # Fallback to DATABASE_URL if individual credentials are not provided
     import dj_database_url
 
-    DATABASES["default"] = dj_database_url.parse(config('DATABASE_URL'))
+    DATABASES["default"] = dj_database_url.parse(config("DATABASE_URL"))
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -254,7 +326,8 @@ if not VERCEL_URL:
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS", default="http://localhost:3000,http://127.0.0.1:3000",
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:3000,http://127.0.0.1:3000",
 ).split(",")
 
 CORS_ALLOW_CREDENTIALS = True

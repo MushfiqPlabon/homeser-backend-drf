@@ -58,34 +58,39 @@ class CheckoutView(UnifiedBaseGenericView, generics.CreateAPIView):
             # Use CartService to get cart data (dictionary) from Redis or database
             cart_data = self.get_service().get_cart(request.user)
 
-            if not cart_data or not cart_data.get('id'):
+            if not cart_data or not cart_data.get("id"):
                 return Response(
-                    {"detail": "No cart found"}, status=status.HTTP_400_BAD_REQUEST,
+                    {"detail": "No cart found"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Retrieve the actual Order instance from the database using the ID from cart_data
-            order_instance = Order.objects.get(id=cart_data['id'])
+            order_instance = Order.objects.get(id=cart_data["id"])
 
             if not order_instance.items.exists():
                 return Response(
-                    {"detail": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST,
+                    {"detail": "Cart is empty"},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
             # Use OrderService to create order from cart (pass the cart_data dictionary)
             order = OrderService.create_order_from_cart(
-                cart_data, serializer.validated_data,
+                cart_data,
+                serializer.validated_data,
             )
 
             # Use PaymentService to create payment session
             result = PaymentService.create_payment_session(
-                order, serializer.validated_data,
+                order,
+                serializer.validated_data,
             )
 
             return Response(result)
 
         except Order.DoesNotExist:
             return Response(
-                {"detail": "No cart found"}, status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "No cart found"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -141,13 +146,16 @@ class AdminOrderStatusUpdateView(UnifiedBaseGenericView, generics.UpdateAPIView)
 
         if not status:
             return Response(
-                {"detail": "Status is required"}, status=status.HTTP_400_BAD_REQUEST,
+                {"detail": "Status is required"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
             # Use OrderService to update order status
             updated_order = self.get_service().update_order_status(
-                order.id, status, request.user,
+                order.id,
+                status,
+                request.user,
             )
 
             serializer = self.get_serializer(updated_order)

@@ -109,7 +109,8 @@ class AdvancedSearchService:
             # Perform the search with ranking
             results = (
                 Service.objects.annotate(
-                    search=search_vector, rank=SearchRank(search_vector, search_query),
+                    search=search_vector,
+                    rank=SearchRank(search_vector, search_query),
                 )
                 .filter(search=search_query, is_active=True)
                 .order_by("-rank")[:limit]
@@ -127,7 +128,8 @@ class AdvancedSearchService:
                 | Q(description__icontains=query),
                 is_active=True,
             ).annotate(
-                review_count_val=Count("reviews"), avg_rating_val=Avg("reviews__rating"),
+                review_count_val=Count("reviews"),
+                avg_rating_val=Avg("reviews__rating"),
             )[:limit]
 
     @staticmethod
@@ -142,8 +144,12 @@ class AdvancedSearchService:
 
         """
         try:
-            # Direct database lookup
-            service = Service.objects.get(id=service_id, is_active=True)
+            # Direct database lookup with proper prefetching to prevent N+1 queries
+            service = (
+                Service.objects.select_related("category")
+                .prefetch_related("rating_aggregation")
+                .get(id=service_id, is_active=True)
+            )
             return {
                 "id": service.id,
                 "name": service.name,
@@ -179,9 +185,12 @@ class AdvancedSearchService:
                 language = "en"  # Default to English
 
             # Direct database search using istartswith for prefix matching
-            services = Service.objects.filter(name__istartswith=prefix, is_active=True)[
-                :limit
-            ]
+            # Use proper prefetching to prevent N+1 queries when accessing ratings
+            services = (
+                Service.objects.select_related("category")
+                .prefetch_related("rating_aggregation")
+                .filter(name__istartswith=prefix, is_active=True)[:limit]
+            )
 
             results = [
                 {
@@ -204,9 +213,14 @@ class AdvancedSearchService:
             )
             # Fallback to a more general search in case istartswith fails
             try:
-                services = Service.objects.filter(
-                    name__icontains=prefix, is_active=True,
-                )[:limit]
+                services = (
+                    Service.objects.select_related("category")
+                    .prefetch_related("rating_aggregation")
+                    .filter(
+                        name__icontains=prefix,
+                        is_active=True,
+                    )[:limit]
+                )
 
                 results = []
                 for service in services:
@@ -230,7 +244,9 @@ class AdvancedSearchService:
 
     @staticmethod
     def _track_search_query(
-        query: str, language: str = "en", results_count: int = 0,
+        query: str,
+        language: str = "en",
+        results_count: int = 0,
     ) -> None:
         """Track search queries for analytics.
 
@@ -294,7 +310,9 @@ class AdvancedSearchService:
             if len(popular_searches) > MAX_POPULAR_SEARCHES * 2:
                 # Sort by count and keep top MAX_POPULAR_SEARCHES
                 sorted_searches = sorted(
-                    popular_searches.items(), key=lambda x: x[1]["count"], reverse=True,
+                    popular_searches.items(),
+                    key=lambda x: x[1]["count"],
+                    reverse=True,
                 )
                 popular_searches = dict(sorted_searches[:MAX_POPULAR_SEARCHES])
 
@@ -379,7 +397,9 @@ class AdvancedSearchService:
 
     @staticmethod
     def _multi_language_search(
-        query: str, language: str = "en", limit: int = 20,
+        query: str,
+        language: str = "en",
+        limit: int = 20,
     ) -> list[dict]:
         """Perform search in a specific language.
 
@@ -404,7 +424,8 @@ class AdvancedSearchService:
                 | Q(description__icontains=processed_query),
                 is_active=True,
             ).annotate(
-                review_count_val=Count("reviews"), avg_rating_val=Avg("reviews__rating"),
+                review_count_val=Count("reviews"),
+                avg_rating_val=Avg("reviews__rating"),
             )[:limit]
 
             results = [
@@ -452,7 +473,8 @@ class AdvancedSearchService:
 
             # Get search results using PostgreSQL full-text search
             services = AdvancedSearchService.get_postgresql_search_results(
-                processed_query, limit,
+                processed_query,
+                limit,
             )
 
             results = []
@@ -539,7 +561,8 @@ class AdvancedSearchService:
 
             # Get database analytics
             search_stats = SearchAnalytics.objects.filter(
-                created_at__gte=start_date, created_at__lte=end_date,
+                created_at__gte=start_date,
+                created_at__lte=end_date,
             ).aggregate(
                 total_searches=Count("id"),
                 total_results=Avg("results_count"),
@@ -549,7 +572,8 @@ class AdvancedSearchService:
             # Get language distribution
             language_stats = (
                 SearchAnalytics.objects.filter(
-                    created_at__gte=start_date, created_at__lte=end_date,
+                    created_at__gte=start_date,
+                    created_at__lte=end_date,
                 )
                 .values("language")
                 .annotate(count=Count("id"))
@@ -559,7 +583,8 @@ class AdvancedSearchService:
             # Get hourly distribution
             hourly_stats = (
                 SearchAnalytics.objects.filter(
-                    created_at__gte=start_date, created_at__lte=end_date,
+                    created_at__gte=start_date,
+                    created_at__lte=end_date,
                 )
                 .extra(select={"hour": "EXTRACT(hour FROM created_at)"})
                 .values("hour")
@@ -684,7 +709,9 @@ class AdvancedSearchService:
 
             # Sort by count and return top results
             sorted_searches = sorted(
-                popular_searches.items(), key=lambda x: x[1]["count"], reverse=True,
+                popular_searches.items(),
+                key=lambda x: x[1]["count"],
+                reverse=True,
             )[:limit]
 
             return [

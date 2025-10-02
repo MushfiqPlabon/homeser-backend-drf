@@ -7,7 +7,7 @@ from .abstract_service import AbstractService
 from .base_service import BaseService
 
 
-from .base_service import log_service_method # Add this import
+from .base_service import log_service_method  # Add this import
 
 
 class CategoryService(BaseService, AbstractService):
@@ -80,7 +80,10 @@ class CategoryService(BaseService, AbstractService):
             if not name:
                 raise ValueError("Category name is required")
             name = validate_text_length(
-                name, min_length=1, max_length=100, field_name="Category name",
+                name,
+                min_length=1,
+                max_length=100,
+                field_name="Category name",
             )
         except Exception as e:
             raise ValueError(f"Invalid category name: {e!s}")

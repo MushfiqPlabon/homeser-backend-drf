@@ -1,5 +1,4 @@
-"""Tests for the UniversalObjectPermission class
-"""
+"""Tests for the UniversalObjectPermission class"""
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -22,10 +21,14 @@ class UniversalObjectPermissionTestCase(TestCase):
 
         # Create users
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123",
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
         )
         self.other_user = User.objects.create_user(
-            username="otheruser", email="other@example.com", password="testpass123",
+            username="otheruser",
+            email="other@example.com",
+            password="testpass123",
         )
         self.admin_user = User.objects.create_user(
             username="adminuser",

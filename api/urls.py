@@ -2,17 +2,41 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .drf_extensions_views import CategoryExtendedViewSet, ServiceExtendedViewSet
-from .views.auth import LoginView, RegisterView
-from .views.cart import CartView, AddToCartView, RemoveFromCartView, UpdateCartItemQuantityView
+from .views.auth import LoginView, RegisterView, TokenRefreshView
+from .views.cart import (
+    CartView,
+    AddToCartView,
+    RemoveFromCartView,
+    UpdateCartItemQuantityView,
+)
 from .views.category import CategoryViewSet
-from .views.order import CheckoutView, AdminOrderViewSet, AdminOrderStatusUpdateView, UserOrderViewSet
-from .views.review import ServiceReviewsView, AdminReviewViewSet, ReviewDeleteView, UserReviewsView
+from .views.order import (
+    CheckoutView,
+    AdminOrderViewSet,
+    AdminOrderStatusUpdateView,
+    UserOrderViewSet,
+)
+from .views.review import (
+    ServiceReviewsView,
+    AdminReviewViewSet,
+    ReviewDeleteView,
+    UserReviewsView,
+)
 from .views.search import AdvancedSearchView, SearchAnalyticsView, PopularSearchesView
 from .views.service import AdminServiceViewSet, ServiceListView, ServiceDetailView
 from .views.user import AdminUserViewSet, AdminPromoteUserView, ProfileView
-from .views.payment import PaymentIPNView, PaymentAnalyticsView, PaymentRefundView, PaymentDisputeView
-from .views.password_reset_views import PasswordResetRequestView, PasswordResetConfirmView, PasswordResetValidateTokenView
-from .views.category import CategoryViewSet, CategoryListView, CategoryDetailView
+from .views.payment import (
+    PaymentIPNView,
+    PaymentAnalyticsView,
+    PaymentRefundView,
+    PaymentDisputeView,
+)
+from .views.password_reset_views import (
+    PasswordResetRequestView,
+    PasswordResetConfirmView,
+    PasswordResetValidateTokenView,
+)
+from .views.category import CategoryListView, CategoryDetailView
 from .views.analytics import EmailAnalyticsView, SentimentAnalyticsView
 
 # Default router for existing endpoints
@@ -88,10 +112,23 @@ urlpatterns = [
     # Authentication endpoints
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     # Password reset endpoints
-    path("auth/password-reset/", PasswordResetRequestView.as_view(), name="password_reset"),
-    path("auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
-    path("auth/password-reset/validate/", PasswordResetValidateTokenView.as_view(), name="password_reset_validate"),
+    path(
+        "auth/password-reset/",
+        PasswordResetRequestView.as_view(),
+        name="password_reset",
+    ),
+    path(
+        "auth/password-reset/confirm/",
+        PasswordResetConfirmView.as_view(),
+        name="password_reset_confirm",
+    ),
+    path(
+        "auth/password-reset/validate/",
+        PasswordResetValidateTokenView.as_view(),
+        name="password_reset_validate",
+    ),
     # Service reviews endpoint
     path(
         "services/<int:service_id>/reviews/",
@@ -118,17 +155,35 @@ urlpatterns = [
     path("cart/", CartView.as_view(), name="cart"),
     path("cart/add/", AddToCartView.as_view(), name="add-to-cart"),
     path("cart/remove/", RemoveFromCartView.as_view(), name="remove-from-cart"),
-    path("cart/update-quantity/", UpdateCartItemQuantityView.as_view(), name="update-cart-quantity"),
+    path(
+        "cart/update-quantity/",
+        UpdateCartItemQuantityView.as_view(),
+        name="update-cart-quantity",
+    ),
     # Search endpoints
     path("search/advanced/", AdvancedSearchView.as_view(), name="advanced-search"),
     path("search/analytics/", SearchAnalyticsView.as_view(), name="search-analytics"),
     path("search/popular/", PopularSearchesView.as_view(), name="popular-searches"),
     # Payment endpoints
     path("payments/ipn/", PaymentIPNView.as_view(), name="payment-ipn"),
-    path("payments/analytics/", PaymentAnalyticsView.as_view(), name="payment-analytics"),
-    path("payments/refund/<str:payment_id>/", PaymentRefundView.as_view(), name="payment-refund"),
-    path("payments/dispute/<str:payment_id>/", PaymentDisputeView.as_view(), name="payment-dispute"),
+    path(
+        "payments/analytics/", PaymentAnalyticsView.as_view(), name="payment-analytics"
+    ),
+    path(
+        "payments/refund/<str:payment_id>/",
+        PaymentRefundView.as_view(),
+        name="payment-refund",
+    ),
+    path(
+        "payments/dispute/<str:payment_id>/",
+        PaymentDisputeView.as_view(),
+        name="payment-dispute",
+    ),
     # Analytics endpoints
     path("analytics/email/", EmailAnalyticsView.as_view(), name="email-analytics"),
-    path("analytics/sentiment/", SentimentAnalyticsView.as_view(), name="sentiment-analytics"),
+    path(
+        "analytics/sentiment/",
+        SentimentAnalyticsView.as_view(),
+        name="sentiment-analytics",
+    ),
 ]

@@ -11,7 +11,7 @@ from utils.email.email_service import EmailService
 
 from .base_service import BaseService
 
-from .base_service import log_service_method # Add this import
+from .base_service import log_service_method  # Add this import
 
 User = get_user_model()
 
@@ -81,7 +81,10 @@ class UserService(BaseService):
             if not username:
                 raise ValueError("Username is required")
             username = validate_text_length(
-                username, min_length=1, max_length=150, field_name="Username",
+                username,
+                min_length=1,
+                max_length=150,
+                field_name="Username",
             )
         except Exception as e:
             raise ValueError(f"Invalid username: {e!s}")
@@ -111,7 +114,10 @@ class UserService(BaseService):
             if not first_name:
                 raise ValueError("First name is required")
             first_name = validate_text_length(
-                first_name, min_length=1, max_length=30, field_name="First name",
+                first_name,
+                min_length=1,
+                max_length=30,
+                field_name="First name",
             )
         except Exception as e:
             raise ValueError(f"Invalid first name: {e!s}")
@@ -122,7 +128,10 @@ class UserService(BaseService):
             if not last_name:
                 raise ValueError("Last name is required")
             last_name = validate_text_length(
-                last_name, min_length=1, max_length=30, field_name="Last name",
+                last_name,
+                min_length=1,
+                max_length=30,
+                field_name="Last name",
             )
         except Exception as e:
             raise ValueError(f"Invalid last name: {e!s}")
@@ -312,7 +321,10 @@ class UserService(BaseService):
         if data.get("bio"):
             try:
                 bio = validate_text_length(
-                    data["bio"], min_length=0, max_length=500, field_name="Bio",
+                    data["bio"],
+                    min_length=0,
+                    max_length=500,
+                    field_name="Bio",
                 )
                 data["bio"] = bio
             except Exception as e:
@@ -330,7 +342,10 @@ class UserService(BaseService):
         if data.get("address"):
             try:
                 address = validate_text_length(
-                    data["address"], min_length=0, max_length=200, field_name="Address",
+                    data["address"],
+                    min_length=0,
+                    max_length=200,
+                    field_name="Address",
                 )
                 data["address"] = address
             except Exception as e:

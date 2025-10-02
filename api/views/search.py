@@ -20,7 +20,10 @@ class AdvancedSearchView(UnifiedBaseGenericView):
         description="Search for services using advanced data structures for improved performance.",
         parameters=[
             OpenApiParameter(
-                name="q", description="Search query", required=True, type=str,
+                name="q",
+                description="Search query",
+                required=True,
+                type=str,
             ),
             OpenApiParameter(
                 name="limit",
@@ -71,10 +74,10 @@ class SearchAnalyticsView(UnifiedBaseGenericView, generics.RetrieveAPIView):
     """Get search analytics statistics."""
 
     permission_classes = [permissions.IsAuthenticated]
-    
+
     class SearchAnalyticsSerializer(serializers.Serializer):
         statistics = serializers.DictField()
-    
+
     serializer_class = SearchAnalyticsSerializer
 
     def get(self, request, *args, **kwargs):
@@ -102,11 +105,11 @@ class PopularSearchesView(UnifiedBaseGenericView, generics.ListAPIView):
     """Get popular search queries."""
 
     permission_classes = [permissions.AllowAny]
-    
+
     class PopularSearchesSerializer(serializers.Serializer):
         popular_searches = serializers.ListField(child=serializers.CharField())
         count = serializers.IntegerField()
-    
+
     serializer_class = PopularSearchesSerializer
 
     def list(self, request, *args, **kwargs):

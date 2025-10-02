@@ -23,7 +23,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Creating service categories..."))
         for cat_data in categories_data:
             category, created = ServiceCategory.objects.get_or_create(
-                name=cat_data["name"], defaults={"description": cat_data["description"]},
+                name=cat_data["name"],
+                defaults={"description": cat_data["description"]},
             )
             if created:
                 self.stdout.write(
@@ -113,7 +114,8 @@ class Command(BaseCommand):
         try:
             admin_user = User.objects.get(email="admin@example.com")
             profile, created = UserProfile.objects.get_or_create(
-                user=admin_user, defaults={"bio": "System Administrator"},
+                user=admin_user,
+                defaults={"bio": "System Administrator"},
             )
             if created:
                 self.stdout.write(self.style.SUCCESS("Admin user profile created."))

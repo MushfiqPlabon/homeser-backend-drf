@@ -7,7 +7,6 @@ This package brings together common serializer functionality in one place for be
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from decimal import Decimal
 
 from drf_spectacular.utils import OpenApiTypes, extend_schema_field
 from rest_framework import serializers
@@ -37,8 +36,7 @@ User = get_user_model()
 
 # Base serializer classes for common functionality
 class BaseSerializer(serializers.ModelSerializer):
-    """Abstract base serializer with common functionality.
-    """
+    """Abstract base serializer with common functionality."""
 
     def get_calculated_field(self, obj, field_name, fallback_field=None, default=None):
         """Generic method to get calculated fields with fallback logic.
@@ -92,7 +90,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         help_text="Enter a strong password with at least 8 characters",
     )
     password_confirm = serializers.CharField(
-        write_only=True, help_text="Confirm your password by entering it again",
+        write_only=True,
+        help_text="Confirm your password by entering it again",
     )
 
     class Meta:
@@ -177,8 +176,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(BaseSerializer):
-    """Serializer for user profiles with profile picture URL.
-    """
+    """Serializer for user profiles with profile picture URL."""
 
     user = UserSerializer(read_only=True)
     profile_pic_url = serializers.SerializerMethodField()
@@ -235,7 +233,8 @@ class ServiceSerializer(BaseSerializer):
     """
 
     category = ServiceCategorySerializer(
-        read_only=True, help_text="Category details for this service",
+        read_only=True,
+        help_text="Category details for this service",
     )
     avg_rating = serializers.SerializerMethodField(
         help_text="Average rating calculated from all reviews",
@@ -362,27 +361,22 @@ class ReviewSerializer(BaseSerializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
-    """Serializer for order items with service information.
-    """
+    """Serializer for order items with service information."""
 
     service = ServiceSerializer(read_only=True)
     total_price = serializers.SerializerMethodField(
         help_text="The total price for this order item (quantity * unit_price)"
     )
-    
+
     class Meta:
         model = OrderItem
-        fields = '__all__'
-        read_only_fields = ('total_price',)
-    
+        fields = "__all__"
+        read_only_fields = ("total_price",)
+
     @extend_schema_field(OpenApiTypes.NUMBER)
     def get_total_price(self, obj):
         """Method to access the total_price property from the model"""
         return obj.total_price
-
-    class Meta:
-        model = OrderItem
-        fields = ("id", "service", "quantity", "price", "total_price")
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -411,33 +405,33 @@ class OrderSerializer(serializers.ModelSerializer):
     order_id = serializers.ReadOnlyField(
         help_text="Unique identifier for the order that can be used for tracking",
     )
-    
+
     # Add explicit field definitions with type hints for schema generation
     status = serializers.CharField(
         read_only=True,
-        help_text="Current status of the order (e.g., pending, confirmed, completed)"
+        help_text="Current status of the order (e.g., pending, confirmed, completed)",
     )
     payment_status = serializers.CharField(
         read_only=True,
-        help_text="Status of payment processing (e.g., pending, completed, failed)"
+        help_text="Status of payment processing (e.g., pending, completed, failed)",
     )
     subtotal = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
         read_only=True,
-        help_text="Total cost of items before tax"
+        help_text="Total cost of items before tax",
     )
     tax = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
         read_only=True,
-        help_text="Tax amount calculated for the order"
+        help_text="Tax amount calculated for the order",
     )
     total = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
         read_only=True,
-        help_text="Final total including items, tax, and any additional fees"
+        help_text="Final total including items, tax, and any additional fees",
     )
 
     class Meta:
@@ -461,7 +455,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class EmailAnalyticsSerializer(serializers.Serializer):
     """Serializer for email analytics response"""
-    
+
     success = serializers.BooleanField()
     data = serializers.DictField()
     message = serializers.CharField()
@@ -469,7 +463,7 @@ class EmailAnalyticsSerializer(serializers.Serializer):
 
 class SentimentAnalyticsSerializer(serializers.Serializer):
     """Serializer for sentiment analytics response"""
-    
+
     success = serializers.BooleanField()
     data = serializers.DictField()
     message = serializers.CharField()
@@ -486,11 +480,13 @@ class CheckoutSerializer(serializers.Serializer):
     """
 
     name = serializers.CharField(
-        max_length=100, help_text="Full name of the person placing the order",
+        max_length=100,
+        help_text="Full name of the person placing the order",
     )
     address = serializers.CharField(help_text="Complete shipping address for the order")
     phone = serializers.CharField(
-        max_length=20, help_text="Contact phone number for delivery and order updates",
+        max_length=20,
+        help_text="Contact phone number for delivery and order updates",
     )
     payment_method = serializers.CharField(
         default="sslcommerz",
@@ -556,8 +552,7 @@ class AdminPromoteSerializer(serializers.Serializer):
 
 # Polymorphic serializers for different service types
 class PolymorphicServiceSerializer(BaseSerializer):
-    """Polymorphic serializer that adapts based on the service type.
-    """
+    """Polymorphic serializer that adapts based on the service type."""
 
     def to_representation(self, instance):
         """Return the appropriate serializer based on the service type.
@@ -580,8 +575,7 @@ class PolymorphicServiceSerializer(BaseSerializer):
 
 
 class PremiumServiceSerializer(ServiceSerializer):
-    """Serializer for premium services with additional fields.
-    """
+    """Serializer for premium services with additional fields."""
 
     class Meta(ServiceSerializer.Meta):
         fields = ServiceSerializer.Meta.fields + (
@@ -591,8 +585,7 @@ class PremiumServiceSerializer(ServiceSerializer):
 
 
 class SpecializedServiceSerializer(ServiceSerializer):
-    """Serializer for specialized services with additional fields.
-    """
+    """Serializer for specialized services with additional fields."""
 
     class Meta(ServiceSerializer.Meta):
         fields = ServiceSerializer.Meta.fields + (
@@ -603,8 +596,7 @@ class SpecializedServiceSerializer(ServiceSerializer):
 
 # Serializer factory for creating different types of serializers
 class SerializerFactory:
-    """Factory for creating different types of serializers.
-    """
+    """Factory for creating different types of serializers."""
 
     SERIALIZER_MAP = {
         "service": ServiceSerializer,

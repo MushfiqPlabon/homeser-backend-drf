@@ -7,21 +7,21 @@ logger = logging.getLogger(__name__)
 
 
 class RedisBloomService:
-    """Service to handle RedisBloom operations for probabilistic data structures
-    """
+    """Service to handle RedisBloom operations for probabilistic data structures"""
 
     _client = None
 
     @classmethod
     def get_client(cls):
-        """Get or create RedisBloom client
-        """
+        """Get or create RedisBloom client"""
         if cls._client is None:
             if getattr(settings, "VERCEL_URL", None):
                 return None
             try:
                 redis_url = getattr(
-                    settings, "REDISBLOOM_HOST", "redis://127.0.0.1:6379",
+                    settings,
+                    "REDISBLOOM_HOST",
+                    "redis://127.0.0.1:6379",
                 )
                 cls._client = Client(host=redis_url)
             except Exception as e:

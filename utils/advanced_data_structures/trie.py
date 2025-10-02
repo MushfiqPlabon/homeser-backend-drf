@@ -90,7 +90,11 @@ class Trie:
         return results
 
     def _collect_words(
-        self, node: TrieNode, prefix: str, results: list[dict], limit: int,
+        self,
+        node: TrieNode,
+        prefix: str,
+        results: list[dict],
+        limit: int,
     ) -> None:
         """Collect words from a given node.
 

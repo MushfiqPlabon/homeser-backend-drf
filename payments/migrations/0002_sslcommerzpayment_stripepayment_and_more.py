@@ -44,7 +44,9 @@ class Migration(migrations.Migration):
                 (
                     "_status",
                     models.CharField(
-                        db_column="status", default="pending", max_length=20,
+                        db_column="status",
+                        default="pending",
+                        max_length=20,
                     ),
                 ),
                 ("session_key", models.CharField(blank=True, max_length=200)),
@@ -92,7 +94,9 @@ class Migration(migrations.Migration):
                 (
                     "_status",
                     models.CharField(
-                        db_column="status", default="pending", max_length=20,
+                        db_column="status",
+                        default="pending",
+                        max_length=20,
                     ),
                 ),
                 (
@@ -143,19 +147,22 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="payment",
             index=models.Index(
-                fields=["_status"], name="payments_pa_status_7ad4af_idx",
+                fields=["_status"],
+                name="payments_pa_status_7ad4af_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="payment",
             index=models.Index(
-                fields=["created_at"], name="payments_pa_created_b8a300_idx",
+                fields=["created_at"],
+                name="payments_pa_created_b8a300_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="payment",
             index=models.Index(
-                fields=["_status", "created_at"], name="payments_pa_status_343680_idx",
+                fields=["_status", "created_at"],
+                name="payments_pa_status_343680_idx",
             ),
         ),
         migrations.AddField(

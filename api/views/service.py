@@ -123,16 +123,23 @@ class ServiceDetailView(UnifiedBaseGenericView, generics.RetrieveAPIView):
     service_class = ServiceService
 
     def get_queryset(self):
+        # Use simple prefetching for related data
+        queryset = Service.objects.select_related(
+            "category"
+        ).prefetch_related(
+            "rating_aggregation",
+            "reviews__user"
+        )
+        return queryset
+
+    def get_object(self):
+        """Get a specific service by ID"""
         service_id = self.kwargs.get("id")
         service = self.get_service().get_service_detail(service_id)
-        if service:
-            # Use smart prefetching for related data
-            base_queryset = Service.objects.filter(id=service_id).prefetch_related(
-                "rating_aggregation",
-            )
-            with SmartPrefetcher(base_queryset, self.request) as queryset:
-                return queryset
-        return Service.objects.none()
+        if not service:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Service not found or not active")
+        return service
 
 
 class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateMixin):
@@ -159,7 +166,8 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
         """Only staff users can access this endpoint"""
         # Permission checking is handled in the service layer
         queryset = self.get_service().get_services(
-            user=self.request.user, admin_mode=True,
+            user=self.request.user,
+            admin_mode=True,
         )
 
         # Always prefetch rating aggregation to avoid N+1 queries in the serializer
@@ -187,7 +195,8 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
         try:
             # Use ServiceService to create service
             service = self.get_service().create_service(
-                serializer.validated_data, request.user,
+                serializer.validated_data,
+                request.user,
             )
             serializer.instance = service
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -212,7 +221,9 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
         try:
             # Use ServiceService to update service
             service = self.get_service().update_service(
-                instance.id, serializer.validated_data, request.user,
+                instance.id,
+                serializer.validated_data,
+                request.user,
             )
             serializer.instance = service
             return Response(serializer.data)

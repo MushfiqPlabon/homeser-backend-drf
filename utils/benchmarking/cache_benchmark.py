@@ -105,7 +105,9 @@ class CacheBenchmark:
 
         results.append(
             self.benchmark_cache_operation(
-                "Django Cache Delete", lambda i: cache.delete(f"test_key_{i}"), 100,
+                "Django Cache Delete",
+                lambda i: cache.delete(f"test_key_{i}"),
+                100,
             ),
         )
 
@@ -114,7 +116,9 @@ class CacheBenchmark:
             self.benchmark_cache_operation(
                 "Redis Set",
                 lambda i: self.redis_client.set(
-                    f"redis_test_key_{i}", f"redis_test_value_{i}", ex=300,
+                    f"redis_test_key_{i}",
+                    f"redis_test_value_{i}",
+                    ex=300,
                 ),
                 100,
             ),
@@ -143,7 +147,9 @@ class CacheBenchmark:
             self.benchmark_cache_operation(
                 "Hash Table Set",
                 lambda i: service_hash_table.set(
-                    f"hash_key_{i}", {"id": i, "name": f"Service {i}"}, timeout=300,
+                    f"hash_key_{i}",
+                    {"id": i, "name": f"Service {i}"},
+                    timeout=300,
                 ),
                 100,
             ),

@@ -3,8 +3,7 @@
 # It acts as the central dispatcher, including URL patterns from individual apps
 # and defining project-wide routes like the admin interface and API documentation.
 
-"""URL configuration for homeser project.
-"""
+"""URL configuration for homeser project."""
 
 from django.conf import settings
 from django.conf.urls.static import static

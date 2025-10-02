@@ -26,25 +26,37 @@ from utils.validation_package import (
 
 def validate_service_description(value):
     return validate_text_length(
-        value, min_length=20, max_length=2000, field_name="Description",
+        value,
+        min_length=20,
+        max_length=2000,
+        field_name="Description",
     )
 
 
 def validate_service_short_desc(value):
     return validate_text_length(
-        value, min_length=10, max_length=300, field_name="Short description",
+        value,
+        min_length=10,
+        max_length=300,
+        field_name="Short description",
     )
 
 
 def validate_base_service_short_desc(value):
     return validate_text_length(
-        value, min_length=10, max_length=300, field_name="Short description",
+        value,
+        min_length=10,
+        max_length=300,
+        field_name="Short description",
     )
 
 
 def validate_base_service_description(value):
     return validate_text_length(
-        value, min_length=20, max_length=2000, field_name="Description",
+        value,
+        min_length=20,
+        max_length=2000,
+        field_name="Description",
     )
 
 
@@ -165,11 +177,11 @@ class Service(LifecycleModel, NamedSluggedModel):
         # This is a simple implementation; in production, consider using a more efficient approach
         if self.pk:  # Only for existing objects
             from django.db.models import Avg, Count
-            from reviews.models import Review
 
             # Update rating aggregation
             aggregation_data = Review.objects.filter(service=self).aggregate(
-                avg_rating=Avg("rating"), count=Count("id"),
+                avg_rating=Avg("rating"),
+                count=Count("id"),
             )
 
             if aggregation_data["avg_rating"] is not None:
@@ -207,36 +219,63 @@ class Service(LifecycleModel, NamedSluggedModel):
     @hook(AFTER_DELETE)
     def update_rating_aggregation(self):
         """Update the ServiceRatingAggregation when a service is created, updated, or deleted."""
-        from django.db.models import Avg, Count
+        try:
+            # Ensure the service instance is properly saved before proceeding
+            if not self.pk:
+                import logging
 
-        from .models import Review, ServiceRatingAggregation
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"Service {self} does not have a primary key yet, skipping rating aggregation update"
+                )
+                return
 
-        # Calculate the new average and count
-        aggregation = Review.objects.filter(service=self).aggregate(
-            avg_rating=Avg("rating"), count=Count("id"),
-        )
+            from django.db.models import Avg, Count
+            from .models import ServiceRatingAggregation
 
-        # Get or create the ServiceRatingAggregation object
-        rating_aggregation, created = ServiceRatingAggregation.objects.get_or_create(
-            service=self,
-            defaults={
-                "average": aggregation["avg_rating"] or 0,
-                "count": aggregation["count"] or 0,
-            },
-        )
+            # Calculate the new average and count
+            aggregation = Review.objects.filter(service=self).aggregate(
+                avg_rating=Avg("rating"),
+                count=Count("id"),
+            )
 
-        # If it already existed, update it
-        if not created:
-            rating_aggregation.average = aggregation["avg_rating"] or 0
-            rating_aggregation.count = aggregation["count"] or 0
-            rating_aggregation.save()
+            # Get or create the ServiceRatingAggregation object
+            rating_aggregation, created = (
+                ServiceRatingAggregation.objects.get_or_create(
+                    service=self,
+                    defaults={
+                        "average": float(aggregation["avg_rating"])
+                        if aggregation["avg_rating"] is not None
+                        else 0,
+                        "count": aggregation["count"] or 0,
+                    },
+                )
+            )
 
-        # Use django-cachalot for automatic cache invalidation
-        from cachalot.api import invalidate as cachalot_invalidate
+            # If it already existed, update it
+            if not created:
+                rating_aggregation.average = (
+                    float(aggregation["avg_rating"])
+                    if aggregation["avg_rating"] is not None
+                    else 0
+                )
+                rating_aggregation.count = aggregation["count"] or 0
+                rating_aggregation.save()
 
-        # Invalidate cache for the specific service and related data
-        cachalot_invalidate(Service)
-        cachalot_invalidate(Review)
+            # Use django-cachalot for automatic cache invalidation
+            from cachalot.api import invalidate as cachalot_invalidate
+
+            # Invalidate cache for the specific service and related data
+            cachalot_invalidate("services.Service")
+            cachalot_invalidate("services.Review")
+        except Exception as e:
+            # Log the error but don't prevent the operation from completing
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Error updating rating aggregation for service {self.id}: {e}"
+            )
 
     @hook(AFTER_CREATE)
     @hook(AFTER_UPDATE)
@@ -296,7 +335,10 @@ class Review(BaseReview):
     """Customer reviews for services with sentiment analysis"""
 
     service = models.ForeignKey(
-        Service, on_delete=models.CASCADE, related_name="reviews", db_index=True,
+        Service,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+        db_index=True,
     )
     # user, rating, text, sentiment_polarity, sentiment_subjectivity, sentiment_label,
     # is_flagged, flagged_reason, created, modified are inherited from BaseReview
@@ -336,7 +378,9 @@ class ServiceRatingAggregation(models.Model):
     """Precomputed rating aggregations for services"""
 
     service = models.OneToOneField(
-        Service, on_delete=models.CASCADE, related_name="rating_aggregation",
+        Service,
+        on_delete=models.CASCADE,
+        related_name="rating_aggregation",
     )
     average = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     count = models.PositiveIntegerField(default=0)
@@ -358,7 +402,6 @@ class ABCModelBase(ABCMeta, ModelBase):
     """
 
 
-
 class BaseService(NamedSluggedModel, ABC, metaclass=ABCModelBase):
     """Abstract base class for all service types with polymorphic behavior"""
 
@@ -369,7 +412,9 @@ class BaseService(NamedSluggedModel, ABC, metaclass=ABCModelBase):
     ]
 
     service_type = models.CharField(
-        max_length=20, choices=SERVICE_TYPES, default="basic",
+        max_length=20,
+        choices=SERVICE_TYPES,
+        default="basic",
     )
     category = models.ForeignKey(
         ServiceCategory,
@@ -476,7 +521,9 @@ class SpecializedService(BaseService):
 
     complexity_factor = models.DecimalField(max_digits=3, decimal_places=2, default=1.0)
     required_equipment_cost = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0.0,
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
     )
 
     class Meta:

@@ -16,7 +16,8 @@ class Command(BaseCommand):
         for service in services:
             # Calculate the average and count
             aggregation = Review.objects.filter(service=service).aggregate(
-                avg_rating=Avg("rating"), count=Count("id"),
+                avg_rating=Avg("rating"),
+                count=Count("id"),
             )
 
             # Create or update the ServiceRatingAggregation object

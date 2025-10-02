@@ -69,7 +69,8 @@ class BaseReview(TimeStampedModel, models.Model):
 
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, db_index=True)
     rating = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(5)], db_index=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        db_index=True,
     )
     text = models.TextField()
     # Sentiment analysis fields

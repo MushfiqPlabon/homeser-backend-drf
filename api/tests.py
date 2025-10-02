@@ -35,7 +35,9 @@ class AuthenticationTestCase(APITestCase):
         """Test user login returns tokens"""
         # Create user
         User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123",
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
         )
 
         url = reverse("login")
@@ -51,7 +53,9 @@ class ReviewTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123",
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
         )
         self.category = ServiceCategory.objects.create(name="Test Category")
         self.service = Service.objects.create(
@@ -75,10 +79,15 @@ class ReviewTestCase(APITestCase):
         """Test that review works after purchasing service"""
         # Create an order using proper initial state
         order = Order.objects.create(
-            user=self.user, status="draft", payment_status="unpaid",
+            user=self.user,
+            status="draft",
+            payment_status="unpaid",
         )
         OrderItem.objects.create(
-            order=order, service=self.service, quantity=1, unit_price=self.service.price,
+            order=order,
+            service=self.service,
+            quantity=1,
+            unit_price=self.service.price,
         )
 
         # Use proper transitions to set the order status
@@ -100,7 +109,9 @@ class CheckoutTestCase(APITestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123",
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
         )
         self.category = ServiceCategory.objects.create(name="Test Category")
         self.service = Service.objects.create(
@@ -117,10 +128,18 @@ class CheckoutTestCase(APITestCase):
 
         # Add item to cart - using the proper initial state
         cart = Order.objects.create(
-            user=self.user, status="draft", payment_status="unpaid", customer_name="", customer_address="", customer_phone="",
+            user=self.user,
+            status="draft",
+            payment_status="unpaid",
+            customer_name="",
+            customer_address="",
+            customer_phone="",
         )
         OrderItem.objects.create(
-            order=cart, service=self.service, quantity=1, unit_price=self.service.price,
+            order=cart,
+            service=self.service,
+            quantity=1,
+            unit_price=self.service.price,
         )
 
         url = reverse("checkout")
@@ -134,11 +153,12 @@ class CheckoutTestCase(APITestCase):
 
         # Should either succeed or fail gracefully (depending on network)
         self.assertIn(
-            response.status_code, [status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST],
+            response.status_code,
+            [status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST],
         )
 
         # Fetch the updated order from the database
-        updated_order = Order.objects.get(id=cart.id) # Use the original cart's ID
+        updated_order = Order.objects.get(id=cart.id)  # Use the original cart's ID
 
         self.assertEqual(updated_order.customer_name, "Test User")
         self.assertEqual(updated_order.customer_address, "123 Test St")
@@ -149,17 +169,23 @@ class PaymentTestCase(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser", email="test@example.com", password="testpass123",
+            username="testuser",
+            email="test@example.com",
+            password="testpass123",
         )
         self.order = Order.objects.create(
-            user=self.user, status="pending", total=100.00,
+            user=self.user,
+            status="pending",
+            total=100.00,
         )
 
     def test_ipn_processing_sets_payment_status(self):
         """Test IPN processing sets payment_status='paid' after validation"""
         # Create payment record
         payment = Payment.objects.create(
-            order=self.order, transaction_id="test_tran_123", amount=100.00,
+            order=self.order,
+            transaction_id="test_tran_123",
+            amount=100.00,
         )
 
         # Simulate successful validation (would normally call SSLCOMMERZ)

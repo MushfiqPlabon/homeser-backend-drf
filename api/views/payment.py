@@ -13,26 +13,33 @@ class PaymentIPNView(UnifiedBaseGenericView):
 
     permission_classes = [permissions.AllowAny]
     service_class = PaymentService
-    
+
     class IPNSerializer(serializers.Serializer):
         """Serializer for IPN requests"""
+
         val_id = serializers.CharField(required=False)
         tran_id = serializers.CharField(required=False)
-        
+
         # Add all the fields that SSLCOMMERZ typically sends
-        amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
-        store_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+        amount = serializers.DecimalField(
+            max_digits=10, decimal_places=2, required=False
+        )
+        store_amount = serializers.DecimalField(
+            max_digits=10, decimal_places=2, required=False
+        )
         bank_tran_id = serializers.CharField(required=False)
         card_type = serializers.CharField(required=False)
         card_no = serializers.CharField(required=False)
         currency_type = serializers.CharField(required=False)
-        currency_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+        currency_amount = serializers.DecimalField(
+            max_digits=10, decimal_places=2, required=False
+        )
         issuer_bank = serializers.CharField(required=False)
         issuer_country = serializers.CharField(required=False)
         tran_date = serializers.CharField(required=False)
         emi_inst_status = serializers.CharField(required=False)
         account_details = serializers.CharField(required=False)
-    
+
     serializer_class = IPNSerializer
 
     @csrf_exempt  # CSRF protection is exempted because this is an external callback (IPN)
@@ -52,13 +59,14 @@ class PaymentAnalyticsView(UnifiedBaseGenericView):
 
     permission_classes = [permissions.IsAuthenticated]
     service_class = PaymentService
-    
+
     class PaymentAnalyticsSerializer(serializers.Serializer):
         """Serializer for payment analytics response"""
+
         success = serializers.BooleanField()
         data = serializers.DictField()
         message = serializers.CharField()
-    
+
     serializer_class = PaymentAnalyticsSerializer
 
     def get(self, request, *args, **kwargs):
@@ -102,12 +110,15 @@ class PaymentRefundView(UnifiedBaseGenericView):
 
     permission_classes = [permissions.IsAuthenticated]
     service_class = PaymentService
-    
+
     class RefundSerializer(serializers.Serializer):
         """Serializer for refund requests"""
-        refund_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+
+        refund_amount = serializers.DecimalField(
+            max_digits=10, decimal_places=2, required=False, allow_null=True
+        )
         reason = serializers.CharField(max_length=200, required=False, default="")
-    
+
     serializer_class = RefundSerializer
 
     def post(self, request, *args, **kwargs):
@@ -153,11 +164,12 @@ class PaymentDisputeView(UnifiedBaseGenericView):
 
     permission_classes = [permissions.IsAuthenticated]
     service_class = PaymentService
-    
+
     class DisputeSerializer(serializers.Serializer):
         """Serializer for dispute requests"""
+
         dispute_reason = serializers.CharField(max_length=500)
-    
+
     serializer_class = DisputeSerializer
 
     def post(self, request, *args, **kwargs):
@@ -175,7 +187,9 @@ class PaymentDisputeView(UnifiedBaseGenericView):
             )
 
         result = self.get_service().handle_dispute(
-            payment_id=payment_id, dispute_reason=dispute_reason, user=request.user,
+            payment_id=payment_id,
+            dispute_reason=dispute_reason,
+            user=request.user,
         )
 
         if result["success"]:

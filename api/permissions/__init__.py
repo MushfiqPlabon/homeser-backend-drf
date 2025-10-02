@@ -25,8 +25,7 @@ User = get_user_model()
 
 
 class BasePermission(permissions.BasePermission):
-    """Abstract base permission class with common functionality.
-    """
+    """Abstract base permission class with common functionality."""
 
     def has_permission(self, request, view):
         """Check if user has general permission to access the view.
@@ -59,8 +58,7 @@ class BasePermission(permissions.BasePermission):
 
 
 class IsOwnerOrReadOnly(BasePermission):
-    """Permission that allows owners to edit their own objects, but allows read-only access to others.
-    """
+    """Permission that allows owners to edit their own objects, but allows read-only access to others."""
 
     def has_object_permission(self, request, view, obj):
         """Check if user has permission to access a specific object.
@@ -83,8 +81,7 @@ class IsOwnerOrReadOnly(BasePermission):
 
 
 class IsStaffOrReadOnly(BasePermission):
-    """Permission that allows staff members to edit objects, but allows read-only access to others.
-    """
+    """Permission that allows staff members to edit objects, but allows read-only access to others."""
 
     def has_permission(self, request, view):
         """Check if user has general permission to access the view.
@@ -106,8 +103,7 @@ class IsStaffOrReadOnly(BasePermission):
 
 
 class UniversalObjectPermission(BasePermission):
-    """Universal object permission class that checks Django-Guardian permissions.
-    """
+    """Universal object permission class that checks Django-Guardian permissions."""
 
     def has_permission(self, request, view):
         """Check if user has general permission to access the view.
@@ -187,8 +183,7 @@ class UniversalObjectPermission(BasePermission):
 
 
 class PermissionService:
-    """Service class for managing permissions.
-    """
+    """Service class for managing permissions."""
 
     @staticmethod
     def assign_object_permission(user, permission, obj):
@@ -334,7 +329,10 @@ class PermissionService:
             if not permission:
                 raise ValueError("Permission is required")
             permission = validate_text_length(
-                permission, min_length=1, max_length=100, field_name="Permission",
+                permission,
+                min_length=1,
+                max_length=100,
+                field_name="Permission",
             )
             data["permission"] = permission
         except Exception as e:
@@ -354,8 +352,7 @@ class PermissionService:
 
 
 class PermissionFactory:
-    """Factory for creating different types of permissions.
-    """
+    """Factory for creating different types of permissions."""
 
     PERMISSION_TYPES = {
         "view": "view",
@@ -408,7 +405,11 @@ class PermissionFactory:
 
     @staticmethod
     def create_object_permission(
-        permission_type, model_class, obj, user=None, group=None,
+        permission_type,
+        model_class,
+        obj,
+        user=None,
+        group=None,
     ):
         """Create an object-level permission of the specified type.
 

@@ -32,7 +32,9 @@ class Migration(migrations.Migration):
                 (
                     "express_fee",
                     models.DecimalField(
-                        decimal_places=2, default=Decimal("100.00"), max_digits=10,
+                        decimal_places=2,
+                        default=Decimal("100.00"),
+                        max_digits=10,
                     ),
                 ),
             ],
@@ -191,13 +193,15 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["user", "_status"], name="orders_orde_user_id_02a211_idx",
+                fields=["user", "_status"],
+                name="orders_orde_user_id_02a211_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["_status", "created_at"], name="orders_orde_status_25e057_idx",
+                fields=["_status", "created_at"],
+                name="orders_orde_status_25e057_idx",
             ),
         ),
         migrations.AddIndex(
@@ -210,7 +214,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["created_at"], name="orders_orde_created_0e92de_idx",
+                fields=["created_at"],
+                name="orders_orde_created_0e92de_idx",
             ),
         ),
     ]

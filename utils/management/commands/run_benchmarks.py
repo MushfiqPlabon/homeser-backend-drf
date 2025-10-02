@@ -12,13 +12,19 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--api-only", action="store_true", help="Run only API benchmarks",
+            "--api-only",
+            action="store_true",
+            help="Run only API benchmarks",
         )
         parser.add_argument(
-            "--db-only", action="store_true", help="Run only database benchmarks",
+            "--db-only",
+            action="store_true",
+            help="Run only database benchmarks",
         )
         parser.add_argument(
-            "--cache-only", action="store_true", help="Run only cache benchmarks",
+            "--cache-only",
+            action="store_true",
+            help="Run only cache benchmarks",
         )
         parser.add_argument(
             "--output-dir",
@@ -46,7 +52,8 @@ class Command(BaseCommand):
 
                 # Save API results
                 with open(
-                    os.path.join(output_dir, "api_benchmark_results.json"), "w",
+                    os.path.join(output_dir, "api_benchmark_results.json"),
+                    "w",
                 ) as f:
                     json.dump(api_results, f, indent=2)
             except Exception as e:
@@ -65,7 +72,8 @@ class Command(BaseCommand):
 
                 # Save database results
                 with open(
-                    os.path.join(output_dir, "database_benchmark_results.json"), "w",
+                    os.path.join(output_dir, "database_benchmark_results.json"),
+                    "w",
                 ) as f:
                     json.dump(db_results, f, indent=2)
             except Exception as e:
@@ -84,7 +92,8 @@ class Command(BaseCommand):
 
                 # Save cache results
                 with open(
-                    os.path.join(output_dir, "cache_benchmark_results.json"), "w",
+                    os.path.join(output_dir, "cache_benchmark_results.json"),
+                    "w",
                 ) as f:
                     json.dump(cache_results, f, indent=2)
             except Exception as e:

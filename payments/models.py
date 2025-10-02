@@ -24,7 +24,9 @@ class Payment(BaseModel):
     ]
 
     order = models.OneToOneField(
-        Order, on_delete=models.CASCADE, related_name="payment",
+        Order,
+        on_delete=models.CASCADE,
+        related_name="payment",
     )
     transaction_id = models.CharField(max_length=100, unique=True, db_index=True)
     session_key = models.CharField(max_length=200, blank=True)

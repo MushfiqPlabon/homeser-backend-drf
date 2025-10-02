@@ -71,13 +71,15 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["_status", "created"], name="orders_orde_status_5a4cbe_idx",
+                fields=["_status", "created"],
+                name="orders_orde_status_5a4cbe_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["created"], name="orders_orde_created_51311f_idx",
+                fields=["created"],
+                name="orders_orde_created_51311f_idx",
             ),
         ),
     ]

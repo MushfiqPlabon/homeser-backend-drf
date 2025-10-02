@@ -1,5 +1,8 @@
 from django.db import models
 from django.db.models import Prefetch
+from services.models import Review
+from orders.models import OrderItem
+from accounts.models import UserProfile
 
 
 class SmartPrefetcher:
@@ -43,7 +46,7 @@ class SmartPrefetcher:
                 prefetch_strategy.append(
                     Prefetch(
                         "reviews",
-                        queryset=models.Review.objects.select_related("user").order_by(
+                        queryset=Review.objects.select_related("user").order_by(
                             "-created_at",
                         )[:5],
                     ),
@@ -57,7 +60,8 @@ class SmartPrefetcher:
             # Always prefetch items and related services
             prefetch_strategy.append(
                 Prefetch(
-                    "items", queryset=models.OrderItem.objects.select_related("service"),
+                    "items",
+                    queryset=OrderItem.objects.select_related("service"),
                 ),
             )
 
@@ -73,8 +77,10 @@ class SmartPrefetcher:
                 prefetch_strategy.append(
                     Prefetch(
                         "userprofile",
-                        queryset=models.UserProfile.objects.only(
-                            "bio", "profile_pic", "social_links",
+                        queryset=UserProfile.objects.only(
+                            "bio",
+                            "profile_pic",
+                            "social_links",
                         ),
                     ),
                 )
@@ -82,8 +88,7 @@ class SmartPrefetcher:
         return prefetch_strategy
 
     def _apply_smart_prefetching(self):
-        """Apply smart prefetching to the queryset based on the analyzed pattern.
-        """
+        """Apply smart prefetching to the queryset based on the analyzed pattern."""
         prefetch_strategy = self._analyze_query_pattern()
 
         if prefetch_strategy:
@@ -98,8 +103,7 @@ class SmartPrefetcher:
 
 
 def apply_smart_prefetching(viewset_or_view):
-    """Decorator to apply smart prefetching to a viewset or view.
-    """
+    """Decorator to apply smart prefetching to a viewset or view."""
     original_get_queryset = getattr(viewset_or_view, "get_queryset", None)
 
     if original_get_queryset:
@@ -108,12 +112,14 @@ def apply_smart_prefetching(viewset_or_view):
             queryset = original_get_queryset(self)
             # Apply smart prefetching
             with SmartPrefetcher(
-                queryset, getattr(self, "request", None),
+                queryset,
+                getattr(self, "request", None),
             ) as prefetched_queryset:
                 return prefetched_queryset
 
         viewset_or_view.get_queryset = wrapped_get_queryset.__get__(
-            viewset_or_view, viewset_or_view.__class__,
+            viewset_or_view,
+            viewset_or_view.__class__,
         )
 
     return viewset_or_view

@@ -16,7 +16,9 @@ class UtilsConfig(AppConfig):
 
         # Only populate structures in production or when explicitly requested
         if not settings.DEBUG or getattr(
-            settings, "POPULATE_ADVANCED_STRUCTURES_ON_STARTUP", False,
+            settings,
+            "POPULATE_ADVANCED_STRUCTURES_ON_STARTUP",
+            False,
         ):
             try:
                 utils.populate_advanced_structures.populate_all_advanced_structures()

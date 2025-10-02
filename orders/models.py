@@ -86,10 +86,16 @@ class Order(BaseModel):
     ]
 
     user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="orders", db_index=True,
+        User,
+        on_delete=models.CASCADE,
+        related_name="orders",
+        db_index=True,
     )
     _status = FSMField(
-        choices=STATUS_CHOICES, default="draft", db_column="status", db_index=True,
+        choices=STATUS_CHOICES,
+        default="draft",
+        db_column="status",
+        db_index=True,
     )
     _payment_status = FSMField(
         choices=PAYMENT_STATUS_CHOICES,
@@ -102,13 +108,22 @@ class Order(BaseModel):
     customer_address = models.TextField()
     customer_phone = models.CharField(max_length=20, blank=True)
     _subtotal = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"), db_column="subtotal",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        db_column="subtotal",
     )
     _tax = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"), db_column="tax",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        db_column="tax",
     )
     _total = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("0.00"), db_column="total",
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        db_column="total",
     )
     order_id = models.CharField(max_length=50, unique=True, db_index=True)
 
@@ -290,7 +305,9 @@ class Order(BaseModel):
         logger.info(f"Order {self.order_id} confirmed")
 
     @transition(
-        field=_status, source=["draft", "pending", "processing"], target="cancelled",
+        field=_status,
+        source=["draft", "pending", "processing"],
+        target="cancelled",
     )
     def cancel(self):
         """Cancel the order"""
@@ -327,7 +344,9 @@ class Order(BaseModel):
         logger.info(f"Order {self.order_id} payment partially refunded")
 
     @transition(
-        field=_payment_status, source=["paid", "partially_refunded"], target="disputed",
+        field=_payment_status,
+        source=["paid", "partially_refunded"],
+        target="disputed",
     )
     def dispute_payment(self):
         """Dispute the payment"""
@@ -399,7 +418,9 @@ class ExpressOrder(Order):
     """Express order with faster delivery"""
 
     express_fee = models.DecimalField(
-        max_digits=10, decimal_places=2, default=Decimal("100.00"),
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("100.00"),
     )
 
     def __init__(self, *args, **kwargs):

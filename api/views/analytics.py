@@ -1,5 +1,3 @@
-from datetime import timedelta
-from django.utils import timezone
 from django.db.models import Avg, Count
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -21,7 +19,10 @@ class EmailAnalyticsView(UnifiedBaseGenericView):
         # Check if user is admin
         if not request.user.is_staff:
             return Response(
-                {"success": False, "message": "Only admin users can access email analytics"},
+                {
+                    "success": False,
+                    "message": "Only admin users can access email analytics",
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -56,7 +57,10 @@ class SentimentAnalyticsView(UnifiedBaseGenericView):
         # Check if user is admin
         if not request.user.is_staff:
             return Response(
-                {"success": False, "message": "Only admin users can access sentiment analytics"},
+                {
+                    "success": False,
+                    "message": "Only admin users can access sentiment analytics",
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 

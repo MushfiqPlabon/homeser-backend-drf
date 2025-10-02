@@ -61,7 +61,10 @@ class Migration(migrations.Migration):
                 (
                     "annual_revenue",
                     models.DecimalField(
-                        blank=True, decimal_places=2, max_digits=15, null=True,
+                        blank=True,
+                        decimal_places=2,
+                        max_digits=15,
+                        null=True,
                     ),
                 ),
                 (
@@ -249,7 +252,9 @@ class Migration(migrations.Migration):
                 (
                     "discount_applied",
                     models.DecimalField(
-                        decimal_places=2, default=Decimal("0.00"), max_digits=5,
+                        decimal_places=2,
+                        default=Decimal("0.00"),
+                        max_digits=5,
                     ),
                 ),
                 ("final_cost", models.DecimalField(decimal_places=2, max_digits=10)),

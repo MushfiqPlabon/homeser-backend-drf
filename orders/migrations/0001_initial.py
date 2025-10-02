@@ -75,19 +75,25 @@ class Migration(migrations.Migration):
                 (
                     "subtotal",
                     models.DecimalField(
-                        decimal_places=2, default=Decimal("0.00"), max_digits=10,
+                        decimal_places=2,
+                        default=Decimal("0.00"),
+                        max_digits=10,
                     ),
                 ),
                 (
                     "tax",
                     models.DecimalField(
-                        decimal_places=2, default=Decimal("0.00"), max_digits=10,
+                        decimal_places=2,
+                        default=Decimal("0.00"),
+                        max_digits=10,
                     ),
                 ),
                 (
                     "total",
                     models.DecimalField(
-                        decimal_places=2, default=Decimal("0.00"), max_digits=10,
+                        decimal_places=2,
+                        default=Decimal("0.00"),
+                        max_digits=10,
                     ),
                 ),
                 (
@@ -149,25 +155,29 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["user", "status"], name="orders_orde_user_id_02a211_idx",
+                fields=["user", "status"],
+                name="orders_orde_user_id_02a211_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["status", "created_at"], name="orders_orde_status_25e057_idx",
+                fields=["status", "created_at"],
+                name="orders_orde_status_25e057_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["payment_status"], name="orders_orde_payment_bc131d_idx",
+                fields=["payment_status"],
+                name="orders_orde_payment_bc131d_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="order",
             index=models.Index(
-                fields=["order_id"], name="orders_orde_order_i_205064_idx",
+                fields=["order_id"],
+                name="orders_orde_order_i_205064_idx",
             ),
         ),
     ]

@@ -7,12 +7,12 @@ from django.shortcuts import get_object_or_404
 
 from orders.models import Order
 from utils.email.email_service import EmailService
-from django_fsm import can_proceed # Add this import
+from django_fsm import can_proceed  # Add this import
 
 from .base_service import BaseService
 
 
-from .base_service import log_service_method # Add this import
+from .base_service import log_service_method  # Add this import
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class OrderService(BaseService):
         if not user.is_authenticated:
             # Return empty queryset for anonymous users
             return Order.objects.none()
-        
+
         # Check if user is admin when in admin mode
         if admin_mode:
             cls._require_staff_permission(user)
@@ -104,7 +104,7 @@ class OrderService(BaseService):
                 "refunded": order.refund,
                 "on_hold": order.hold,
                 "disputed": order.dispute,
-                "delivered": order.complete, # Assuming delivered leads to completed
+                "delivered": order.complete,  # Assuming delivered leads to completed
                 "completed": order.complete,
             }
 
@@ -112,16 +112,22 @@ class OrderService(BaseService):
 
             if transition_func:
                 if not can_proceed(transition_func):
-                    raise ValueError(f"Cannot transition order from '{order.status}' to '{status}'.")
+                    raise ValueError(
+                        f"Cannot transition order from '{order.status}' to '{status}'."
+                    )
                 transition_func()
             else:
                 valid_statuses = [choice[0] for choice in Order.STATUS_CHOICES]
                 if status in valid_statuses:
                     # This case should ideally not be reached if all transitions are mapped
                     # But as a safeguard, if it's a valid status but no transition, raise error
-                    raise ValueError(f"No explicit transition defined for status '{status}'.")
+                    raise ValueError(
+                        f"No explicit transition defined for status '{status}'."
+                    )
                 else:
-                    raise ValueError(f"Invalid status '{status}'. Valid statuses are: {', '.join(valid_statuses)}.")
+                    raise ValueError(
+                        f"Invalid status '{status}'. Valid statuses are: {', '.join(valid_statuses)}."
+                    )
 
             order.save()
 
@@ -164,7 +170,10 @@ class OrderService(BaseService):
             if not name:
                 raise ValueError("Customer name is required")
             name = validate_text_length(
-                name, min_length=1, max_length=100, field_name="Customer name",
+                name,
+                min_length=1,
+                max_length=100,
+                field_name="Customer name",
             )
         except Exception as e:
             raise ValueError(f"Invalid customer name: {e!s}")
@@ -175,7 +184,10 @@ class OrderService(BaseService):
             if not address:
                 raise ValueError("Customer address is required")
             address = validate_text_length(
-                address, min_length=1, max_length=500, field_name="Customer address",
+                address,
+                min_length=1,
+                max_length=500,
+                field_name="Customer address",
             )
         except Exception as e:
             raise ValueError(f"Invalid customer address: {e!s}")
@@ -186,7 +198,10 @@ class OrderService(BaseService):
             if not phone:
                 raise ValueError("Customer phone is required")
             phone = validate_text_length(
-                phone, min_length=1, max_length=20, field_name="Customer phone",
+                phone,
+                min_length=1,
+                max_length=20,
+                field_name="Customer phone",
             )
         except Exception as e:
             raise ValueError(f"Invalid customer phone: {e!s}")
@@ -199,10 +214,10 @@ class OrderService(BaseService):
 
         # Retrieve the actual Order instance from the database
         # Assuming cart_data has an 'id' field for the draft order
-        if not cart_data.get('id'):
+        if not cart_data.get("id"):
             raise ValueError("Cart data must contain an 'id' for the draft order.")
 
-        order = Order.objects.get(id=cart_data['id'])
+        order = Order.objects.get(id=cart_data["id"])
 
         # Update order with customer details
         logger.debug(f"Before update: order.customer_name = '{order.customer_name}'")
@@ -210,21 +225,27 @@ class OrderService(BaseService):
         order.customer_address = address
         order.customer_phone = phone
         order.payment_method = payment_method
-        logger.debug(f"After update: order.customer_name = '{order.customer_name}' (should be '{name}')")
+        logger.debug(
+            f"After update: order.customer_name = '{order.customer_name}' (should be '{name}')"
+        )
 
         # Use simplified state machine transition to set payment status to paid
         # This should always succeed from 'unpaid' to 'paid'
         if not can_proceed(order.pay):
-            raise ValueError(f"Cannot transition cart payment status from '{order.payment_status}' to 'paid'.")
+            raise ValueError(
+                f"Cannot transition cart payment status from '{order.payment_status}' to 'paid'."
+            )
         order.pay()
 
         # Use simplified state machine transition to set status to pending
         # This should always succeed from 'draft' to 'pending'
         if not can_proceed(order.submit):
-            raise ValueError(f"Cannot transition cart status from '{order.status}' to 'pending'.")
+            raise ValueError(
+                f"Cannot transition cart status from '{order.status}' to 'pending'."
+            )
         order.submit()
 
-        order.save() # This save is crucial
+        order.save()  # This save is crucial
         logger.debug(f"After save: order.customer_name = '{order.customer_name}'")
 
         return order
@@ -265,14 +286,22 @@ class OrderService(BaseService):
 
             if payment_transition_func:
                 if not can_proceed(payment_transition_func):
-                    raise ValueError(f"Cannot transition payment status from '{order.payment_status}' to '{payment_status}'.")
+                    raise ValueError(
+                        f"Cannot transition payment status from '{order.payment_status}' to '{payment_status}'."
+                    )
                 payment_transition_func()
             else:
-                valid_payment_statuses = [choice[0] for choice in Order.PAYMENT_STATUS_CHOICES]
+                valid_payment_statuses = [
+                    choice[0] for choice in Order.PAYMENT_STATUS_CHOICES
+                ]
                 if payment_status in valid_payment_statuses:
-                    raise ValueError(f"No explicit payment transition defined for status '{payment_status}'.")
+                    raise ValueError(
+                        f"No explicit payment transition defined for status '{payment_status}'."
+                    )
                 else:
-                    raise ValueError(f"Invalid payment status '{payment_status}'. Valid statuses are: {', '.join(valid_payment_statuses)}.")
+                    raise ValueError(
+                        f"Invalid payment status '{payment_status}'. Valid statuses are: {', '.join(valid_payment_statuses)}."
+                    )
 
             order.save()
 

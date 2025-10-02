@@ -113,23 +113,27 @@ class EmailAnalytics:
 
         # Get delivery statistics
         delivered_emails = EmailTracking.objects.filter(
-            sent_at__gte=cutoff_date, delivered_at__isnull=False,
+            sent_at__gte=cutoff_date,
+            delivered_at__isnull=False,
         ).count()
 
         # Get open rate
         opened_emails = EmailTracking.objects.filter(
-            sent_at__gte=cutoff_date, is_opened=True,
+            sent_at__gte=cutoff_date,
+            is_opened=True,
         ).count()
 
         # Get click rate
         clicked_emails = EmailTracking.objects.filter(
-            sent_at__gte=cutoff_date, is_clicked=True,
+            sent_at__gte=cutoff_date,
+            is_clicked=True,
         ).count()
 
         # Get error rate
         error_emails = (
             EmailTracking.objects.filter(
-                sent_at__gte=cutoff_date, error_message__isnull=False,
+                sent_at__gte=cutoff_date,
+                error_message__isnull=False,
             )
             .exclude(error_message="")
             .count()
@@ -263,7 +267,8 @@ class EmailService:
         """
         # Get pending emails that are scheduled to be sent
         pending_emails = EmailQueue.objects.filter(
-            status="pending", scheduled_at__lte=timezone.now(),
+            status="pending",
+            scheduled_at__lte=timezone.now(),
         )[:batch_size]
 
         results = {"processed": 0, "sent": 0, "failed": 0}
@@ -348,7 +353,9 @@ class EmailService:
 
             # Create email message
             from_email = from_email or getattr(
-                settings, "DEFAULT_FROM_EMAIL", "webmaster@localhost",
+                settings,
+                "DEFAULT_FROM_EMAIL",
+                "webmaster@localhost",
             )
             msg = EmailMultiAlternatives(
                 subject=subject,
@@ -424,7 +431,10 @@ class EmailService:
             logger.error(f"Error sending email: {e}")
             # Track email error
             EmailService._track_email(
-                email_type, recipient_list, subject, error_message=str(e),
+                email_type,
+                recipient_list,
+                subject,
+                error_message=str(e),
             )
             return False
 

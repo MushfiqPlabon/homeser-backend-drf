@@ -178,7 +178,9 @@ class ReviewAnalyticsService:
 
         # Get reviews in date range
         reviews = Review.objects.filter(
-            service_id=service_id, created_at__gte=start_date, created_at__lte=end_date,
+            service_id=service_id,
+            created_at__gte=start_date,
+            created_at__lte=end_date,
         ).order_by("created_at")
 
         # Group reviews by week and calculate average sentiment
@@ -347,11 +349,13 @@ class ReviewAnalyticsService:
         previous_week_start = now - timedelta(days=14)
 
         last_week_count = reviews.filter(
-            created_at__gte=last_week_start, created_at__lte=now,
+            created_at__gte=last_week_start,
+            created_at__lte=now,
         ).count()
 
         previous_week_count = reviews.filter(
-            created_at__gte=previous_week_start, created_at__lt=last_week_start,
+            created_at__gte=previous_week_start,
+            created_at__lt=last_week_start,
         ).count()
 
         if previous_week_count > 0:

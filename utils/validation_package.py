@@ -173,7 +173,10 @@ def validate_review_text(value, field_name="Review Text"):
 
     """
     return validate_text_length(
-        value, min_length=10, max_length=500, field_name=field_name,
+        value,
+        min_length=10,
+        max_length=500,
+        field_name=field_name,
     )
 
 
@@ -192,7 +195,10 @@ def validate_service_description(value, field_name="Description"):
 
     """
     return validate_text_length(
-        value, min_length=10, max_length=2000, field_name=field_name,
+        value,
+        min_length=10,
+        max_length=2000,
+        field_name=field_name,
     )
 
 
@@ -211,7 +217,10 @@ def validate_service_short_description(value, field_name="Short Description"):
 
     """
     return validate_text_length(
-        value, min_length=10, max_length=300, field_name=field_name,
+        value,
+        min_length=10,
+        max_length=300,
+        field_name=field_name,
     )
 
 

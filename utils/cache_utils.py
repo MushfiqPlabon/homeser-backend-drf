@@ -86,8 +86,7 @@ def invalidate_service_cache(service_id):
 
 
 def invalidate_service_list_cache():
-    """Invalidate cache for service list data using django-cachalot.
-    """
+    """Invalidate cache for service list data using django-cachalot."""
     try:
         # Use django-cachalot's invalidate function for the Service model
         cachalot_invalidate(Service)
@@ -96,8 +95,7 @@ def invalidate_service_list_cache():
 
 
 def invalidate_all_service_cache():
-    """Invalidate all service-related cache using django-cachalot.
-    """
+    """Invalidate all service-related cache using django-cachalot."""
     try:
         # Invalidate service model and related models
         cachalot_invalidate(Service)

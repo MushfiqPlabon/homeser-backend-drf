@@ -14,7 +14,6 @@ class CustomUserManager(QueryManager, UserManager):
     """Custom user manager that combines caching and user management"""
 
 
-
 class User(AbstractUser):
     """Extended User model with additional fields"""
 
@@ -80,8 +79,7 @@ class BaseCustomer(models.Model):
 
 
 class IndividualCustomer(BaseCustomer):
-    """Individual customer implementation with personal details.
-    """
+    """Individual customer implementation with personal details."""
 
     first_name = models.CharField(max_length=50, db_index=True)
     last_name = models.CharField(max_length=50)
@@ -92,13 +90,11 @@ class IndividualCustomer(BaseCustomer):
         verbose_name_plural = "Individual Customers"
 
     def get_discount_rate(self):
-        """Individual customers receive no special discount by default.
-        """
+        """Individual customers receive no special discount by default."""
         return Decimal("0.0")
 
     def get_service_fee_multiplier(self):
-        """Individual customers pay standard service fees.
-        """
+        """Individual customers pay standard service fees."""
         return Decimal("1.0")
 
     def save(self, *args, **kwargs):
@@ -107,8 +103,7 @@ class IndividualCustomer(BaseCustomer):
 
 
 class BusinessCustomer(BaseCustomer):
-    """Business customer implementation with business-specific details.
-    """
+    """Business customer implementation with business-specific details."""
 
     BUSINESS_SIZE_CHOICES = [
         ("small", "Small"),
@@ -121,7 +116,10 @@ class BusinessCustomer(BaseCustomer):
     business_size = models.CharField(max_length=20, choices=BUSINESS_SIZE_CHOICES)
     employee_count = models.PositiveIntegerField(default=1)
     annual_revenue = models.DecimalField(
-        max_digits=15, decimal_places=2, null=True, blank=True,
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
     )
 
     class Meta:
@@ -129,8 +127,7 @@ class BusinessCustomer(BaseCustomer):
         verbose_name_plural = "Business Customers"
 
     def get_discount_rate(self):
-        """Calculate discount rate based on business size.
-        """
+        """Calculate discount rate based on business size."""
         discount_mapping = {
             "small": Decimal("0.05"),
             "medium": Decimal("0.10"),
@@ -139,8 +136,7 @@ class BusinessCustomer(BaseCustomer):
         return discount_mapping.get(self.business_size, Decimal("0.0"))
 
     def get_service_fee_multiplier(self):
-        """Business customers may get reduced service fees based on size.
-        """
+        """Business customers may get reduced service fees based on size."""
         multiplier_mapping = {
             "small": Decimal("0.95"),
             "medium": Decimal("0.90"),
@@ -154,8 +150,7 @@ class BusinessCustomer(BaseCustomer):
 
 
 class GovernmentCustomer(BaseCustomer):
-    """Government customer implementation with government-specific details.
-    """
+    """Government customer implementation with government-specific details."""
 
     government_entity_name = models.CharField(max_length=150, db_index=True)
     government_id = models.CharField(max_length=50, unique=True, db_index=True)
@@ -176,13 +171,11 @@ class GovernmentCustomer(BaseCustomer):
         verbose_name_plural = "Government Customers"
 
     def get_discount_rate(self):
-        """Government customers receive a standard discount.
-        """
+        """Government customers receive a standard discount."""
         return Decimal("0.10")
 
     def get_service_fee_multiplier(self):
-        """Government customers typically get reduced service fees.
-        """
+        """Government customers typically get reduced service fees."""
         return Decimal("0.80")
 
     def save(self, *args, **kwargs):
@@ -254,8 +247,7 @@ class CustomerBillingAddress(BaseModel):
         )
 
     def save(self, *args, **kwargs):
-        """Override save to ensure only one default address per customer.
-        """
+        """Override save to ensure only one default address per customer."""
         if self.is_default:
             # Set all other addresses for this customer as non-default
             CustomerBillingAddress.objects.filter(
@@ -277,11 +269,14 @@ class CustomerServiceHistory(BaseModel):
     customer = GenericForeignKey("content_type", "object_id")
 
     service = models.CharField(
-        max_length=200, db_index=True,
+        max_length=200,
+        db_index=True,
     )  # Could be a relation to Service model
     service_cost = models.DecimalField(max_digits=10, decimal_places=2)
     discount_applied = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal("0.00"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
     )
     final_cost = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -320,8 +315,7 @@ class UserProfile(BaseModel):
         return f"{self.user.get_full_name()}'s Profile"
 
     def save(self, *args, **kwargs):
-        """Save the profile and assign default permissions to the associated user.
-        """
+        """Save the profile and assign default permissions to the associated user."""
         is_new = self.pk is None
         super().save(*args, **kwargs)
 

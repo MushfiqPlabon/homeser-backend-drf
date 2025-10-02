@@ -19,8 +19,7 @@ from .services.service_service import ServiceService
 
 
 class UpdatedKeyConstructor(DefaultKeyConstructor):
-    """Custom key constructor for enhanced caching
-    """
+    """Custom key constructor for enhanced caching"""
 
     user = bits.UserKeyBit()
     querystring = (
@@ -30,10 +29,11 @@ class UpdatedKeyConstructor(DefaultKeyConstructor):
 
 
 class BaseExtendedViewSet(
-    CacheResponseMixin, NestedViewSetMixin, viewsets.ModelViewSet,
+    CacheResponseMixin,
+    NestedViewSetMixin,
+    viewsets.ModelViewSet,
 ):
-    """Base extended viewset with caching and nested functionality
-    """
+    """Base extended viewset with caching and nested functionality"""
 
     cache_key_func = UpdatedKeyConstructor()
     permission_classes = [IsAuthenticated]
@@ -45,8 +45,7 @@ class BaseExtendedViewSet(
 
 
 class ServiceExtendedViewSet(BaseExtendedViewSet):
-    """Enhanced service viewset using drf-extensions features
-    """
+    """Enhanced service viewset using drf-extensions features"""
 
     serializer_class = ServiceSerializer
     filter_backends = [DjangoFilterBackend]
@@ -56,12 +55,13 @@ class ServiceExtendedViewSet(BaseExtendedViewSet):
         return ServiceService()
 
     def get_queryset(self):
-        return Service.objects.all()
+        return Service.objects.select_related("category").prefetch_related(
+            "rating_aggregation"
+        )
 
 
 class CategoryExtendedViewSet(BaseExtendedViewSet):
-    """Enhanced category viewset using drf-extensions features
-    """
+    """Enhanced category viewset using drf-extensions features"""
 
     serializer_class = ServiceCategorySerializer
     filter_backends = [DjangoFilterBackend]
@@ -76,8 +76,7 @@ class CategoryExtendedViewSet(BaseExtendedViewSet):
 
 # Additional viewset with custom action patterns
 class AdvancedServiceViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
-    """Advanced service viewset with enhanced drf-extensions functionality
-    """
+    """Advanced service viewset with enhanced drf-extensions functionality"""
 
     serializer_class = ServiceSerializer
     queryset = Service.objects.all()
@@ -87,7 +86,9 @@ class AdvancedServiceViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
     # This would typically be used for nested routes like /categories/{category_pk}/services/
     # It allows for automatic filtering of services based on the parent category
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = Service.objects.select_related("category").prefetch_related(
+            "rating_aggregation"
+        )
 
         # If this is a nested view under a category, filter by the category
         category_pk = self.kwargs.get("parent_lookup_category")

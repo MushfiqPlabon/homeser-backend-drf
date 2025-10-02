@@ -157,7 +157,6 @@ class ServiceService(BaseService):
                 .prefetch_related(
                     "rating_aggregation",  # Use precomputed aggregation
                     "reviews__user",  # Prefetch user information with reviews
-                    "orders",  # Prefetch related orders if needed
                 )
                 .filter(id=service_id, is_active=True)
                 .first()
@@ -200,7 +199,10 @@ class ServiceService(BaseService):
             if not name:
                 raise ValueError("Service name is required")
             name = validate_text_length(
-                name, min_length=1, max_length=200, field_name="Service name",
+                name,
+                min_length=1,
+                max_length=200,
+                field_name="Service name",
             )
         except Exception as e:
             logger.error(f"Invalid service name: {e!s}")
@@ -227,7 +229,10 @@ class ServiceService(BaseService):
             if not description:
                 raise ValueError("Description is required")
             description = validate_text_length(
-                description, min_length=20, max_length=5000, field_name="Description",
+                description,
+                min_length=20,
+                max_length=5000,
+                field_name="Description",
             )
         except Exception as e:
             logger.error(f"Invalid description: {e!s}")
@@ -264,7 +269,9 @@ class ServiceService(BaseService):
 
             # Create initial rating aggregation
             ServiceRatingAggregation.objects.create(
-                service=instance, average=0, count=0,
+                service=instance,
+                average=0,
+                count=0,
             )
 
             # Assign object-level permissions using django-guardian

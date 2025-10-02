@@ -127,7 +127,8 @@ class Migration(migrations.Migration):
                 (
                     "last_searched",
                     models.DateTimeField(
-                        db_index=True, default=django.utils.timezone.now,
+                        db_index=True,
+                        default=django.utils.timezone.now,
                     ),
                 ),
             ],
@@ -139,10 +140,12 @@ class Migration(migrations.Migration):
                         name="utils_popul_query_42b877_idx",
                     ),
                     models.Index(
-                        fields=["search_count"], name="utils_popul_search__f8c2f0_idx",
+                        fields=["search_count"],
+                        name="utils_popul_search__f8c2f0_idx",
                     ),
                     models.Index(
-                        fields=["last_searched"], name="utils_popul_last_se_3c736a_idx",
+                        fields=["last_searched"],
+                        name="utils_popul_last_se_3c736a_idx",
                     ),
                 ],
                 "unique_together": {("query", "language")},
@@ -169,7 +172,8 @@ class Migration(migrations.Migration):
                 (
                     "created_at",
                     models.DateTimeField(
-                        db_index=True, default=django.utils.timezone.now,
+                        db_index=True,
+                        default=django.utils.timezone.now,
                     ),
                 ),
             ],

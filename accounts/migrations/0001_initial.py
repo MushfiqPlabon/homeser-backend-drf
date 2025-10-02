@@ -35,7 +35,9 @@ class Migration(migrations.Migration):
                 (
                     "last_login",
                     models.DateTimeField(
-                        blank=True, null=True, verbose_name="last login",
+                        blank=True,
+                        null=True,
+                        verbose_name="last login",
                     ),
                 ),
                 (
@@ -80,7 +82,8 @@ class Migration(migrations.Migration):
                 (
                     "date_joined",
                     models.DateTimeField(
-                        default=django.utils.timezone.now, verbose_name="date joined",
+                        default=django.utils.timezone.now,
+                        verbose_name="date joined",
                     ),
                 ),
                 ("email", models.EmailField(max_length=254, unique=True)),
@@ -137,7 +140,10 @@ class Migration(migrations.Migration):
                 (
                     "profile_pic",
                     cloudinary.models.CloudinaryField(
-                        blank=True, max_length=255, null=True, verbose_name="image",
+                        blank=True,
+                        max_length=255,
+                        null=True,
+                        verbose_name="image",
                     ),
                 ),
                 ("social_links", models.JSONField(blank=True, default=dict)),

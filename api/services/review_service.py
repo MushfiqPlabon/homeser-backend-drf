@@ -7,7 +7,7 @@ from services.models import Review
 
 from .base_service import BaseService
 
-from .base_service import log_service_method # Add this import
+from .base_service import log_service_method  # Add this import
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class ReviewService(BaseService):
             # Manual logger.info removed
 
             return review
-        except Exception as e:
+        except Exception:
             # Manual logger.error removed, decorator handles it
             raise
 
@@ -156,6 +156,6 @@ class ReviewService(BaseService):
             # Manual logger.info removed
 
             return result
-        except Exception as e:
+        except Exception:
             # Manual logger.error removed, decorator handles it
             raise

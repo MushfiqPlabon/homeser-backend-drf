@@ -33,8 +33,7 @@ def setup_permissions():
 
 
 def assign_user_permissions(user):
-    """Assign basic permissions to a user.
-    """
+    """Assign basic permissions to a user."""
     # Users can view and change their own profile
     assign_perm("accounts.view_user", user, user)
     assign_perm("accounts.change_user", user, user)
@@ -54,16 +53,14 @@ def assign_service_provider_permissions(user, service=None):
 
 
 def assign_customer_permissions(user):
-    """Assign customer permissions to a user.
-    """
+    """Assign customer permissions to a user."""
     # Customers can add orders and reviews
     assign_perm("orders.add_order", user)
     assign_perm("services.add_review", user)
 
 
 def assign_order_permissions(user, order):
-    """Assign permissions for a specific order to a user.
-    """
+    """Assign permissions for a specific order to a user."""
     assign_perm("orders.view_order", user, order)
     assign_perm("orders.change_order", user, order)
     assign_perm("orders.delete_order", user, order)
@@ -75,26 +72,22 @@ def assign_order_permissions(user, order):
 
 
 def assign_review_permissions(user, review):
-    """Assign permissions for a specific review to a user.
-    """
+    """Assign permissions for a specific review to a user."""
     assign_perm("services.view_review", user, review)
     assign_perm("services.change_review", user, review)
     assign_perm("services.delete_review", user, review)
 
 
 def is_service_owner(user, service):
-    """Check if user is the owner of a service.
-    """
+    """Check if user is the owner of a service."""
     return user.has_perm("services.change_service", service)
 
 
 def is_order_owner(user, order):
-    """Check if user is the owner of an order.
-    """
+    """Check if user is the owner of an order."""
     return user.has_perm("orders.view_order", order)
 
 
 def is_review_owner(user, review):
-    """Check if user is the owner of a review.
-    """
+    """Check if user is the owner of a review."""
     return user.has_perm("services.view_review", review)

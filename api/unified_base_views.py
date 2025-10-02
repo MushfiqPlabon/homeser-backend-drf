@@ -65,8 +65,12 @@ class UnifiedBaseViewSet(
             Response: Formatted error response
 
         """
-        from rest_framework.exceptions import APIException, AuthenticationFailed, NotAuthenticated, PermissionDenied
-        
+        from rest_framework.exceptions import (
+            AuthenticationFailed,
+            NotAuthenticated,
+            PermissionDenied,
+        )
+
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
             return format_error_response(
                 error_code="AUTHENTICATION_ERROR",
@@ -121,8 +125,7 @@ class UnifiedBaseGenericView(
 
 
 class UnifiedBaseReadOnlyViewSet(UnifiedBaseViewSet):
-    """Base read-only viewset with common functionality.
-    """
+    """Base read-only viewset with common functionality."""
 
     def __init__(self, *args, **kwargs):
         self.read_only = True
@@ -130,8 +133,7 @@ class UnifiedBaseReadOnlyViewSet(UnifiedBaseViewSet):
 
 
 class UnifiedReadOnlyViewSet(UnifiedBaseViewSet):
-    """Base read-only viewset with common functionality.
-    """
+    """Base read-only viewset with common functionality."""
 
     def __init__(self, *args, **kwargs):
         self.read_only = True
@@ -139,8 +141,7 @@ class UnifiedReadOnlyViewSet(UnifiedBaseViewSet):
 
 
 class UnifiedCRUDViewSet(UnifiedBaseViewSet):
-    """Base viewset for full CRUD operations with standardized functionality.
-    """
+    """Base viewset for full CRUD operations with standardized functionality."""
 
     def __init__(self, *args, **kwargs):
         self.read_only = False
@@ -148,8 +149,7 @@ class UnifiedCRUDViewSet(UnifiedBaseViewSet):
 
 
 class UnifiedUserViewSet(UnifiedReadOnlyViewSet):
-    """Base viewset for user-specific data with automatic user filtering.
-    """
+    """Base viewset for user-specific data with automatic user filtering."""
 
     def get_queryset(self):
         """Filter queryset to only include data for the current user."""
@@ -160,15 +160,13 @@ class UnifiedUserViewSet(UnifiedReadOnlyViewSet):
 
 
 class UnifiedAdminViewSet(UnifiedCRUDViewSet):
-    """Base viewset for admin operations with standardized admin permissions.
-    """
+    """Base viewset for admin operations with standardized admin permissions."""
 
     permission_classes = [permissions.IsAdminUser]
 
 
 class CRUDTemplateMixin:
-    """Template method pattern for CRUD operations.
-    """
+    """Template method pattern for CRUD operations."""
 
     def create(self, request, *args, **kwargs):
         """Template method for create operation."""
@@ -226,11 +224,14 @@ class CRUDTemplateMixin:
         try:
             service = self.get_service()
             updated_instance = service.update(
-                instance.id, serializer.validated_data, request.user,
+                instance.id,
+                serializer.validated_data,
+                request.user,
             )
             serializer.instance = updated_instance
             return format_success_response(
-                data=serializer.data, message="Resource updated successfully",
+                data=serializer.data,
+                message="Resource updated successfully",
             )
         except Exception as e:
             return self.handle_exception(e)

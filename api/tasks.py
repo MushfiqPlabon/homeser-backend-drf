@@ -10,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def sync_cart_to_database(user_id):
-    """Synchronize cart from Redis to database (Vercel-compatible synchronous function).
-    """
+    """Synchronize cart from Redis to database (Vercel-compatible synchronous function)."""
     from api.services.cart_service import CartService
 
     # Get cart from Redis
@@ -88,8 +87,7 @@ def sync_cart_to_database(user_id):
 
 
 def process_successful_payment(payment_id):
-    """Process successful payments and update order status (Vercel-compatible synchronous function).
-    """
+    """Process successful payments and update order status (Vercel-compatible synchronous function)."""
     from api.services.cart_service import CartService
     from utils.email.email_service import EmailService
 

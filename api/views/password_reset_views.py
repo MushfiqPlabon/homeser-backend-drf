@@ -60,18 +60,26 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 class PasswordResetValidateTokenSerializer(serializers.Serializer):
     """Serializer for password reset token validation"""
-    
+
     uidb64 = serializers.CharField()
     token = serializers.CharField()
 
 
 @extend_schema(
     request=PasswordResetRequestSerializer,
-    responses={200: {"type": "object", "properties": {"message": {"type": "string"}, "success": {"type": "boolean"}}}},
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"},
+                "success": {"type": "boolean"},
+            },
+        }
+    },
 )
 class PasswordResetRequestView(APIView):
     """Request password reset via email"""
-    
+
     permission_classes = [permissions.AllowAny]
     serializer_class = PasswordResetRequestSerializer
 
@@ -147,11 +155,19 @@ class PasswordResetRequestView(APIView):
 
 @extend_schema(
     request=PasswordResetConfirmSerializer,
-    responses={200: {"type": "object", "properties": {"message": {"type": "string"}, "success": {"type": "boolean"}}}},
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"},
+                "success": {"type": "boolean"},
+            },
+        }
+    },
 )
 class PasswordResetConfirmView(APIView):
     """Confirm password reset with token"""
-    
+
     permission_classes = [permissions.AllowAny]
     serializer_class = PasswordResetConfirmSerializer
 
@@ -193,18 +209,27 @@ class PasswordResetConfirmView(APIView):
 
 @extend_schema(
     request=PasswordResetValidateTokenSerializer,
-    responses={200: {"type": "object", "properties": {"valid": {"type": "boolean"}, "email": {"type": "string"}, "error": {"type": "string"}}}},
+    responses={
+        200: {
+            "type": "object",
+            "properties": {
+                "valid": {"type": "boolean"},
+                "email": {"type": "string"},
+                "error": {"type": "string"},
+            },
+        }
+    },
 )
 class PasswordResetValidateTokenView(APIView):
     """Validate password reset token without resetting password"""
-    
+
     permission_classes = [permissions.AllowAny]
     serializer_class = PasswordResetValidateTokenSerializer
 
     def post(self, request):
         """Validate password reset token without resetting password"""
         serializer = self.serializer_class(data=request.data)
-        
+
         if serializer.is_valid():
             uidb64 = serializer.validated_data["uidb64"]
             token = serializer.validated_data["token"]
@@ -225,7 +250,8 @@ class PasswordResetValidateTokenView(APIView):
             # Check token validity
             if default_token_generator.check_token(user, token):
                 return Response(
-                    {"valid": True, "email": user.email}, status=status.HTTP_200_OK,
+                    {"valid": True, "email": user.email},
+                    status=status.HTTP_200_OK,
                 )
             return Response(
                 {"valid": False, "error": "Invalid or expired reset link."},

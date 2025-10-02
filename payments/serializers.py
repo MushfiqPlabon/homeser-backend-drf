@@ -151,7 +151,9 @@ class PaymentRefundSerializer(serializers.Serializer):
     """Serializer for refunding a payment"""
 
     refund_amount = serializers.DecimalField(
-        max_digits=10, decimal_places=2, required=False,
+        max_digits=10,
+        decimal_places=2,
+        required=False,
     )
     reason = serializers.CharField(max_length=500, required=False, default="")
 

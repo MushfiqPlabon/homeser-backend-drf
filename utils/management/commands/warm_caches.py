@@ -71,7 +71,8 @@ class Command(BaseCommand):
             if services:
                 # Select random services as "popular"
                 popular_service_ids = random.sample(
-                    [s.id for s in services], min(popular_count, len(services)),
+                    [s.id for s in services],
+                    min(popular_count, len(services)),
                 )
 
                 if cache_warming_strategy.warm_popular_services(popular_service_ids):
@@ -105,7 +106,8 @@ class Command(BaseCommand):
             if users:
                 # Select random users
                 selected_users = random.sample(
-                    users, min(random_users_count, len(users)),
+                    users,
+                    min(random_users_count, len(users)),
                 )
 
                 success_count = 0
@@ -144,7 +146,8 @@ class Command(BaseCommand):
             if services:
                 # Select random services
                 selected_services = random.sample(
-                    services, min(service_reviews_count, len(services)),
+                    services,
+                    min(service_reviews_count, len(services)),
                 )
 
                 success_count = 0
@@ -166,7 +169,9 @@ class Command(BaseCommand):
             results = scheduled_cache_warming.warm_all_service_categories()
             if results:
                 self.stdout.write(
-                    self.style.SUCCESS("Successfully ran scheduled cache warming tasks"),
+                    self.style.SUCCESS(
+                        "Successfully ran scheduled cache warming tasks"
+                    ),
                 )
             else:
                 self.stdout.write(

@@ -38,7 +38,10 @@ class Migration(migrations.Migration):
                 (
                     "icon",
                     cloudinary.models.CloudinaryField(
-                        blank=True, max_length=255, null=True, verbose_name="image",
+                        blank=True,
+                        max_length=255,
+                        null=True,
+                        verbose_name="image",
                     ),
                 ),
             ],
@@ -191,13 +194,15 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="service",
             index=models.Index(
-                fields=["category", "is_active"], name="services_se_categor_b50c86_idx",
+                fields=["category", "is_active"],
+                name="services_se_categor_b50c86_idx",
             ),
         ),
         migrations.AddIndex(
             model_name="service",
             index=models.Index(
-                fields=["price", "is_active"], name="services_se_price_bc586b_idx",
+                fields=["price", "is_active"],
+                name="services_se_price_bc586b_idx",
             ),
         ),
     ]

@@ -78,7 +78,9 @@ class SSLCommerzService:
 
             # Log the session creation
             PaymentLog.objects.create(
-                payment=payment, action="session_created", data=result,
+                payment=payment,
+                action="session_created",
+                data=result,
             )
 
             if result.get("status") == "SUCCESS":
@@ -101,7 +103,8 @@ class SSLCommerzService:
             return {
                 "success": False,
                 "error": result.get(
-                    "failedreason", "Payment session creation failed",
+                    "failedreason",
+                    "Payment session creation failed",
                 ),
             }
 
@@ -120,7 +123,8 @@ class SSLCommerzService:
         try:
             # Validate the payment
             validation_response = self.sslcommerz_session.validate_payment(
-                val_id=val_id, tran_id=tran_id,
+                val_id=val_id,
+                tran_id=tran_id,
             )
 
             # Find payment record

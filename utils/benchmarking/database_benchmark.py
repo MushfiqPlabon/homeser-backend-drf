@@ -108,7 +108,9 @@ class DatabaseBenchmark:
         # ORM Queries
         results.append(
             self.benchmark_query(
-                "List Services (ORM)", lambda: list(Service.objects.all()), 20,
+                "List Services (ORM)",
+                lambda: list(Service.objects.all()),
+                20,
             ),
         )
 
@@ -139,7 +141,10 @@ class DatabaseBenchmark:
             self.benchmark_query(
                 "Create Review (ORM)",
                 lambda: Review.objects.create(
-                    service_id=1, user_id=1, rating=5, text="Benchmark test review",
+                    service_id=1,
+                    user_id=1,
+                    rating=5,
+                    text="Benchmark test review",
                 ),
                 10,
             ),

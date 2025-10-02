@@ -219,7 +219,9 @@ class CacheWarmingStrategy:
             return False
 
     def warm_popular_services_by_category(
-        self, category_id: int, limit: int = 10,
+        self,
+        category_id: int,
+        limit: int = 10,
     ) -> bool:
         """Warm cache for popular services in a specific category.
 
@@ -255,8 +257,7 @@ cache_warming_strategy = CacheWarmingStrategy()
 
 
 class ScheduledCacheWarming:
-    """Scheduled cache warming tasks that can be run periodically.
-    """
+    """Scheduled cache warming tasks that can be run periodically."""
 
     def __init__(self):
         self.warming_strategy = cache_warming_strategy
@@ -345,7 +346,8 @@ class ScheduledCacheWarming:
             _ = list(
                 ServiceCategory.objects.annotate(
                     service_count=Count(
-                        "services", filter=models.Q(services__is_active=True),
+                        "services",
+                        filter=models.Q(services__is_active=True),
                     ),
                 ).values("id", "name", "service_count"),
             )

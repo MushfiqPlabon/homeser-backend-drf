@@ -7,8 +7,7 @@ from .base_service import BaseService
 
 
 class BasePermission(ABC):
-    """Abstract base class for permissions.
-    """
+    """Abstract base class for permissions."""
 
     @abstractmethod
     def check_permission(self, user, instance=None):
@@ -28,8 +27,7 @@ class BasePermission(ABC):
 
 
 class OwnerPermission(BasePermission):
-    """Permission that checks if user is the owner of the instance.
-    """
+    """Permission that checks if user is the owner of the instance."""
 
     def check_permission(self, user, instance=None):
         """Check if user is the owner of the instance.
@@ -50,8 +48,7 @@ class OwnerPermission(BasePermission):
 
 
 class StaffPermission(BasePermission):
-    """Permission that checks if user is staff/admin.
-    """
+    """Permission that checks if user is staff/admin."""
 
     def check_permission(self, user, instance=None):
         """Check if user is staff/admin.
@@ -71,8 +68,7 @@ class StaffPermission(BasePermission):
 
 
 class ModelPermission(BasePermission):
-    """Permission that checks Django model-level permissions.
-    """
+    """Permission that checks Django model-level permissions."""
 
     def __init__(self, action):
         """Initialize the model permission.
@@ -106,12 +102,10 @@ class ModelPermission(BasePermission):
 
 
 class CompositePermission(BasePermission):
-    """Composite permission that combines multiple permissions using logical operators.
-    """
+    """Composite permission that combines multiple permissions using logical operators."""
 
     def __init__(self):
-        """Initialize the composite permission.
-        """
+        """Initialize the composite permission."""
         self.permissions = []
         self.operator = "and"  # 'and' or 'or'
 
@@ -154,9 +148,7 @@ class CompositePermission(BasePermission):
                 perm.check_permission(user, instance) for perm in self.permissions
             )
         # operator == 'or'
-        return any(
-            perm.check_permission(user, instance) for perm in self.permissions
-        )
+        return any(perm.check_permission(user, instance) for perm in self.permissions)
 
 
 class PermissionService(BaseService):
@@ -199,8 +191,7 @@ class PermissionService(BaseService):
 
 
 class PermissionFactory:
-    """Factory for creating different types of permissions.
-    """
+    """Factory for creating different types of permissions."""
 
     @staticmethod
     def create_permission(permission_type, **kwargs):

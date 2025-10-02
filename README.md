@@ -12,7 +12,7 @@ This project demonstrates my ability to bridge technical development with busine
 - **Customer Relationship Management**: Comprehensive review and rating system with sentiment analysis
 - **Revenue Generation**: Secure payment processing with SSLCOMMERZ integration
 - **Customer Experience**: Advanced search functionality with multi-language support
-- **Data-Driven Insights**: Search analytics and customer behavior tracking
+- **Data-Driven Insights**: Search analytics, email analytics, and sentiment analysis
 - **User Engagement**: Automated email notifications with customizable templates
 - **Scalable Growth**: Designed for horizontal scaling to accommodate market expansion
 
@@ -24,6 +24,7 @@ For technical recruiters: This platform implements advanced software engineering
 - **Performance**: Advanced data structures (Hash Tables, Tries, Bloom Filters, Segment Trees) for optimal performance
 - **Optimization**: Automatic ORM caching, bulk operations, and N+1 query prevention
 - **Security**: JWT authentication, RBAC, and comprehensive vulnerability protection
+- **Code Quality**: Zero redundancy, zero dead code, and industry-standard linting with Ruff
 - **Development Tools**: Modern Python tooling with uv, Ruff linting, and automated testing
 
 ## Marketing & Business Intelligence Integration
@@ -104,6 +105,13 @@ The platform includes comprehensive API documentation:
 - **Swagger UI**: Available at `/api/schema/swagger-ui/`
 - **ReDoc**: Available at `/api/schema/redoc/`
 - **OpenAPI Schema**: Available at `/api/schema/`
+
+### Analytics Endpoints
+
+- **Email Analytics**: `/api/analytics/email/` - Provides email campaign performance metrics
+- **Sentiment Analytics**: `/api/analytics/sentiment/` - Delivers customer sentiment analysis from reviews
+- **Payment Analytics**: `/api/payments/analytics/` - Offers payment processing insights
+- **Search Analytics**: `/api/search/analytics/` - Reveals customer search behavior patterns
 
 ## Environment Configuration
 

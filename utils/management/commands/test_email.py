@@ -18,7 +18,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--welcome", action="store_true", help="Send welcome email")
         parser.add_argument(
-            "--password-reset", action="store_true", help="Send password reset email",
+            "--password-reset",
+            action="store_true",
+            help="Send password reset email",
         )
         parser.add_argument(
             "--verification",
@@ -32,7 +34,9 @@ class Command(BaseCommand):
         )
         parser.add_argument("--to", type=str, help="Recipient email address")
         parser.add_argument(
-            "--process-queue", action="store_true", help="Process queued emails",
+            "--process-queue",
+            action="store_true",
+            help="Process queued emails",
         )
 
     def handle(self, *args, **options):
@@ -71,7 +75,9 @@ class Command(BaseCommand):
                 )
             else:
                 self.stdout.write(
-                    self.style.ERROR(f"Failed to send welcome email to {options['to']}"),
+                    self.style.ERROR(
+                        f"Failed to send welcome email to {options['to']}"
+                    ),
                 )
         elif options["password_reset"]:
             # Send password reset email

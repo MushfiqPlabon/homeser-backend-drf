@@ -32,7 +32,8 @@ class Command(BaseCommand):
             # If a specific service ID is provided
             if options["service_id"]:
                 services = Service.objects.filter(
-                    id=options["service_id"], is_active=True,
+                    id=options["service_id"],
+                    is_active=True,
                 )
                 if not services.exists():
                     self.stdout.write(

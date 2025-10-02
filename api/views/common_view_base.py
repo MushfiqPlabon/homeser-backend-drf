@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseViewMixin:
-    """Simplified mixin that provides common functionality for all views.
-    """
+    """Simplified mixin that provides common functionality for all views."""
 
     service_class = None  # Must be set in subclasses
 
@@ -35,7 +34,11 @@ class BaseViewMixin:
 
         """
         from rest_framework import serializers
-        from rest_framework.exceptions import APIException, AuthenticationFailed, NotAuthenticated, PermissionDenied
+        from rest_framework.exceptions import (
+            AuthenticationFailed,
+            NotAuthenticated,
+            PermissionDenied,
+        )
 
         # Handle authentication and permission exceptions
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
@@ -50,7 +53,7 @@ class BaseViewMixin:
                 message="You do not have permission to perform this action",
                 status_code=status.HTTP_403_FORBIDDEN,
             )
-        
+
         # Handle ValidationError specifically
         if isinstance(exception, serializers.ValidationError):
             return format_error_response(
@@ -67,15 +70,18 @@ class BaseViewMixin:
 
 
 class BaseViewSet(viewsets.ModelViewSet, BaseViewMixin):
-    """Simplified base ViewSet with common functionality.
-    """
+    """Simplified base ViewSet with common functionality."""
 
     permission_classes = [permissions.IsAuthenticated]
 
     def handle_exception(self, exception):
         """Handle exceptions with proper error formatting."""
         from rest_framework import serializers
-        from rest_framework.exceptions import APIException, AuthenticationFailed, NotAuthenticated, PermissionDenied
+        from rest_framework.exceptions import (
+            AuthenticationFailed,
+            NotAuthenticated,
+            PermissionDenied,
+        )
 
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
             return format_error_response(
@@ -136,8 +142,7 @@ class BaseViewSet(viewsets.ModelViewSet, BaseViewMixin):
 
 
 class ReadOnlyViewSet(BaseViewSet):
-    """Base read-only viewset with common functionality.
-    """
+    """Base read-only viewset with common functionality."""
 
     def __init__(self, *args, **kwargs):
         """Initialize the viewset with read-only HTTP methods."""
@@ -147,8 +152,7 @@ class ReadOnlyViewSet(BaseViewSet):
 
 
 class UserViewSet(ReadOnlyViewSet):
-    """Base viewset for user-specific data with automatic user filtering.
-    """
+    """Base viewset for user-specific data with automatic user filtering."""
 
     def get_queryset(self):
         """Filter queryset to only include data for the current user."""
@@ -159,8 +163,7 @@ class UserViewSet(ReadOnlyViewSet):
 
 
 class AdminViewSet(BaseViewSet):
-    """Base viewset for admin operations with standardized admin permissions.
-    """
+    """Base viewset for admin operations with standardized admin permissions."""
 
     def get_permissions(self):
         """Set admin-specific permissions."""

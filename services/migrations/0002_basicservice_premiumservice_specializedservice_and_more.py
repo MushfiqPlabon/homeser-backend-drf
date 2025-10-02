@@ -204,7 +204,8 @@ class Migration(migrations.Migration):
             model_name="review",
             name="user",
             field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL,
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.AUTH_USER_MODEL,
             ),
         ),
         migrations.AlterField(
@@ -241,7 +242,8 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="service",
             index=models.Index(
-                fields=["name", "category"], name="services_se_name_77ac23_idx",
+                fields=["name", "category"],
+                name="services_se_name_77ac23_idx",
             ),
         ),
         migrations.AddIndex(
