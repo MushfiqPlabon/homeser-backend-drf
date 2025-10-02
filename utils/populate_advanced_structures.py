@@ -91,7 +91,9 @@ def populate_service_bloom_filter(batch_size=10000):
             if not service_ids_batch:
                 break
 
-            service_bloom_filter.bulk_add(service_ids_batch)
+            # Use the available add method instead of bulk_add
+            for service_id in service_ids_batch:
+                service_bloom_filter.add(service_id)
 
             processed_count += len(service_ids_batch)
             logger.info(
@@ -112,7 +114,15 @@ def populate_service_bloom_filter(batch_size=10000):
 def populate_service_name_trie():
     """Populate the service name trie with all service names."""
     try:
-        return service_name_trie.populate_with_services()
+        # Get all active services
+        services = Service.objects.filter(is_active=True).only("id", "name")
+        
+        # Insert each service name into the trie
+        for service in services:
+            service_name_trie.insert(service.name, {"id": service.id})
+            
+        logger.info(f"Successfully populated service name trie with {len(services)} service names")
+        return True
     except Exception as e:
         logger.error(f"Error populating service name trie: {e}")
         return False
@@ -121,8 +131,23 @@ def populate_service_name_trie():
 def populate_service_rating_segment_tree():
     """Populate the service rating segment tree with service ratings."""
     try:
-        # Use the segment tree's built-in population method
-        return service_rating_segment_tree.populate_with_service_ratings()
+        # Get all active services with their ratings using the annotated field
+        services = Service.objects.filter(is_active=True).annotate(
+            avg_rating_val=Avg("reviews__rating")
+        ).only("id")
+        
+        # Create a list of ratings for the segment tree
+        ratings_data = []
+        for service in services:
+            # Use the annotated value or 0 if no reviews
+            rating = float(service.avg_rating_val) if service.avg_rating_val is not None else 0.0
+            ratings_data.append(rating)
+        
+        # Update the segment tree with the ratings data
+        service_rating_segment_tree.data = ratings_data
+        
+        logger.info(f"Successfully populated service rating segment tree with {len(ratings_data)} service ratings")
+        return True
     except Exception as e:
         logger.error(f"Error populating service rating segment tree: {e}")
         return False
