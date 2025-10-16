@@ -7,7 +7,8 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_extensions.cache.mixins import CacheResponseMixin
 from rest_framework_extensions.key_constructor import bits
-from rest_framework_extensions.key_constructor.constructors import DefaultKeyConstructor
+from rest_framework_extensions.key_constructor.constructors import \
+    DefaultKeyConstructor
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from services.models import Service, ServiceCategory

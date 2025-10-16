@@ -4,15 +4,13 @@
 import logging
 
 from django.shortcuts import get_object_or_404
+from django_fsm import can_proceed  # Add this import
 
 from orders.models import Order
 from utils.email.email_service import EmailService
-from django_fsm import can_proceed  # Add this import
-
-from .base_service import BaseService
-
 
 from .base_service import log_service_method  # Add this import
+from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
 

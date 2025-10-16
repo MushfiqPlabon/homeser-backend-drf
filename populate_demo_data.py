@@ -25,8 +25,8 @@ import django  # noqa: E402
 def populate_all_demo_data():
     django.setup()
 
-    from services.models import ServiceCategory, Service, Review
     from accounts.models import User
+    from services.models import Review, Service, ServiceCategory
 
     print("Populating all demo data...")
 
@@ -263,8 +263,14 @@ def populate_all_demo_data():
                 "short_desc": service_data["short_desc"],
                 "description": service_data["description"],
                 "price": service_data["price"],
+                "owner": admin_user,  # Assign admin as owner
             },
         )
+        # If service already exists but doesn't have an owner, assign admin as owner
+        if not created and not service.owner:
+            service.owner = admin_user
+            service.save()
+            print(f"Assigned owner to existing service: {service_data['name']}")
         created_services.append(service)
         if created:
             print(f"Created service: {service_data['name']}")
@@ -288,19 +294,24 @@ def populate_all_demo_data():
     # Get users for review creation
     users = list(User.objects.all()[:5])  # Get first 5 users
     review_count = 0
-    
+
     # Create sample orders for users to enable reviews
     from orders.models import Order, OrderItem
+
     order_count = 0
-    
+
     # Create orders for users purchasing services, then create reviews
-    for i, service in enumerate(created_services):  # Create orders for all services, if needed for reviews
+    for i, service in enumerate(
+        created_services
+    ):  # Create orders for all services, if needed for reviews
         user = users[i % len(users)]  # Rotate through users
-        
+
         # Create a confirmed, paid order for this service
         from decimal import Decimal
-        tax_amount = service.price * Decimal('0.05')  # 5% tax
-        total_amount = service.price + tax_amount
+
+        service_price = Decimal(str(service.price))  # Convert float to Decimal
+        tax_amount = service_price * Decimal("0.05")  # 5% tax
+        total_amount = service_price + tax_amount
         order = Order.objects.create(
             user=user,
             _status="completed",  # Set to completed to allow reviews
@@ -311,7 +322,7 @@ def populate_all_demo_data():
             tax=tax_amount,
             total=total_amount,
         )
-        
+
         # Add the service as an order item
         OrderItem.objects.create(
             order=order,
@@ -319,10 +330,10 @@ def populate_all_demo_data():
             quantity=1,
             unit_price=service.price,
         )
-        
+
         print(f"Created order for user '{user.username}' for service '{service.name}'")
         order_count += 1
-    
+
     print(f"Successfully created {order_count} demo orders to enable reviews!")
 
     # Create more reviews by iterating through services multiple times
@@ -335,13 +346,14 @@ def populate_all_demo_data():
 
         # Check if user has ordered this service before creating a review
         from orders.models import Order
+
         user_orders = Order.objects.filter(
             user=user,
             _status="completed",  # Only completed orders
             _payment_status="paid",
             items__service=service,
         )
-        
+
         if user_orders.exists():
             # User has purchased this service, so they can leave a review
             try:
@@ -349,9 +361,9 @@ def populate_all_demo_data():
                     service=service,
                     user=user,
                     defaults={
-                        "rating": 4
-                        if i % 3 == 0
-                        else 5,  # Mostly 5-star reviews with some 4-star
+                        "rating": (
+                            4 if i % 3 == 0 else 5
+                        ),  # Mostly 5-star reviews with some 4-star
                         "text": review_texts[i % len(review_texts)],
                     },
                 )
@@ -379,7 +391,7 @@ def populate_all_demo_data():
                 tax=service.price * 0.05,
                 total=service.price * 1.05,
             )
-            
+
             # Add the service as an order item
             OrderItem.objects.create(
                 order=order,
@@ -387,16 +399,14 @@ def populate_all_demo_data():
                 quantity=1,
                 unit_price=service.price,
             )
-            
+
             # Now create the review
             try:
                 review, created = Review.objects.get_or_create(
                     service=service,
                     user=user,
                     defaults={
-                        "rating": 4
-                        if i % 3 == 0
-                        else 5,
+                        "rating": 4 if i % 3 == 0 else 5,
                         "text": review_texts[i % len(review_texts)],
                     },
                 )
@@ -417,32 +427,49 @@ def populate_all_demo_data():
 
     # Recalculate rating aggregations for all services to ensure counts are accurate
     from django.db.models import Avg, Count
+
     for service in created_services:
         # Calculate average rating and count from all reviews for this service
         aggregation_data = Review.objects.filter(service=service).aggregate(
             avg_rating=Avg("rating"),
             count=Count("id"),
         )
-        
+
         # Get or create the ServiceRatingAggregation object
         from services.models import ServiceRatingAggregation
+
         rating_aggregation, created = ServiceRatingAggregation.objects.get_or_create(
             service=service,
             defaults={
-                "average": float(aggregation_data["avg_rating"]) if aggregation_data["avg_rating"] is not None else 0,
+                "average": (
+                    float(aggregation_data["avg_rating"])
+                    if aggregation_data["avg_rating"] is not None
+                    else 0
+                ),
                 "count": aggregation_data["count"] or 0,
             },
         )
-        
+
         # If it already existed, update it
         if not created:
-            rating_aggregation.average = float(aggregation_data["avg_rating"]) if aggregation_data["avg_rating"] is not None else 0
+            rating_aggregation.average = (
+                float(aggregation_data["avg_rating"])
+                if aggregation_data["avg_rating"] is not None
+                else 0
+            )
             rating_aggregation.count = aggregation_data["count"] or 0
             rating_aggregation.save()
-        
-        print(f"Updated rating aggregation for service '{service.name}': avg={rating_aggregation.average}, count={rating_aggregation.count}")
 
-    print("\nDemo data population completed!")
+        print(
+            f"Updated rating aggregation for service '{service.name}': avg={rating_aggregation.average}, count={rating_aggregation.count}"
+        )
+
+    # Assign admin as owner to any services that don't have one
+    services_without_owner = Service.objects.filter(owner__isnull=True)
+    for service in services_without_owner:
+        service.owner = admin_user
+        service.save()
+        print(f"Assigned owner to service without owner: {service.name}")
     print("\nCredentials from credentials.txt are now active in the system:")
     print("- Admin: admin@example.com / adminpass")
     print(

@@ -145,18 +145,24 @@ class EmailAnalytics:
             "opened_emails": opened_emails,
             "clicked_emails": clicked_emails,
             "error_emails": error_emails,
-            "open_rate": round((opened_emails / total_emails * 100), 2)
-            if total_emails > 0
-            else 0,
-            "click_rate": round((clicked_emails / total_emails * 100), 2)
-            if total_emails > 0
-            else 0,
-            "delivery_rate": round((delivered_emails / total_emails * 100), 2)
-            if total_emails > 0
-            else 0,
-            "error_rate": round((error_emails / total_emails * 100), 2)
-            if total_emails > 0
-            else 0,
+            "open_rate": (
+                round((opened_emails / total_emails * 100), 2)
+                if total_emails > 0
+                else 0
+            ),
+            "click_rate": (
+                round((clicked_emails / total_emails * 100), 2)
+                if total_emails > 0
+                else 0
+            ),
+            "delivery_rate": (
+                round((delivered_emails / total_emails * 100), 2)
+                if total_emails > 0
+                else 0
+            ),
+            "error_rate": (
+                round((error_emails / total_emails * 100), 2) if total_emails > 0 else 0
+            ),
             "email_types_distribution": list(email_types),
         }
 

@@ -8,10 +8,7 @@ from ..filters import ReviewFilter
 from ..serializers import ReviewSerializer
 from ..services.review_service import ReviewService
 from ..services.service_service import ServiceService
-from ..unified_base_views import (
-    UnifiedBaseGenericView,
-    UnifiedBaseViewSet,
-)
+from ..unified_base_views import UnifiedBaseGenericView, UnifiedBaseViewSet
 
 
 class ServiceReviewsView(UnifiedBaseGenericView, generics.ListCreateAPIView):
@@ -144,7 +141,7 @@ class AdminReviewViewSet(UnifiedBaseViewSet):
             serializer.instance = review
             return Response(serializer.data)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
     def destroy(self, request, *args, **kwargs):
         """Delete a review"""
@@ -155,4 +152,4 @@ class AdminReviewViewSet(UnifiedBaseViewSet):
             self.get_service().delete_review(instance.id, request.user)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)

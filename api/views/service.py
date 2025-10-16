@@ -9,12 +9,8 @@ from services.models import Service
 from ..filters import ServiceFilter
 from ..serializers import ServiceSerializer
 from ..services.service_service import ServiceService
-from ..smart_prefetch import SmartPrefetcher
-from ..unified_base_views import (
-    CRUDTemplateMixin,
-    UnifiedAdminViewSet,
-    UnifiedBaseGenericView,
-)
+from ..unified_base_views import (CRUDTemplateMixin, UnifiedAdminViewSet,
+                                  UnifiedBaseGenericView)
 
 
 class ServiceOrderingFilter(filters.OrderingFilter):
@@ -27,9 +23,13 @@ class ServiceOrderingFilter(filters.OrderingFilter):
 
         ordering = []
         for param in value:
-            if param == "rating":
+            if param in ["rating", "avg_rating", "-avg_rating"]:
                 # Use precomputed aggregations for efficient rating-based ordering
-                ordering.append("-rating_aggregation__average")
+                # Handle both 'avg_rating' and '-avg_rating' by checking for the dash
+                if param.startswith("-"):
+                    ordering.append("-rating_aggregation__average")
+                else:
+                    ordering.append("rating_aggregation__average")
             elif param == "popular":
                 # Use precomputed aggregations for popular services
                 ordering.extend(
@@ -44,7 +44,7 @@ class ServiceOrderingFilter(filters.OrderingFilter):
                     "-created_at",
                 )  # Using created_at instead of 'created' if that's the field name
             else:
-                # Default ordering
+                # Default to name ordering for unrecognized parameters
                 ordering.append("name")
 
         return qs.order_by(*ordering)
@@ -59,6 +59,7 @@ class ServiceFilterWithOrdering(ServiceFilter):
             ("price", "price"),
             ("created_at", "newest"),
             ("rating_aggregation__average", "rating"),
+            ("rating_aggregation__average", "avg_rating"),
             ("rating_aggregation__count", "popular"),
         ),
         field_labels={
@@ -124,11 +125,8 @@ class ServiceDetailView(UnifiedBaseGenericView, generics.RetrieveAPIView):
 
     def get_queryset(self):
         # Use simple prefetching for related data
-        queryset = Service.objects.select_related(
-            "category"
-        ).prefetch_related(
-            "rating_aggregation",
-            "reviews__user"
+        queryset = Service.objects.select_related("category").prefetch_related(
+            "rating_aggregation", "reviews__user"
         )
         return queryset
 
@@ -138,6 +136,7 @@ class ServiceDetailView(UnifiedBaseGenericView, generics.RetrieveAPIView):
         service = self.get_service().get_service_detail(service_id)
         if not service:
             from rest_framework.exceptions import NotFound
+
             raise NotFound("Service not found or not active")
         return service
 
@@ -201,7 +200,7 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
             serializer.instance = service
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
     def _after_create(self, request, response):
         """Hook method called after create."""
@@ -228,7 +227,7 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
             serializer.instance = service
             return Response(serializer.data)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
     def _after_update(self, request, response):
         """Hook method called after update."""
@@ -243,4 +242,4 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
             self.get_service().delete_service(instance.id, request.user)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)

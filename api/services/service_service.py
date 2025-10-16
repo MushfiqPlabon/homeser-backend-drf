@@ -5,7 +5,6 @@ import logging
 import time
 
 from django.db import transaction
-
 # Import pydantic for validation
 from pydantic import BaseModel, ValidationError, field_validator
 
@@ -147,6 +146,58 @@ class ServiceService(BaseService):
         """
         logger.info(f"Getting service detail for service_id: {service_id}")
 
+        # First check the service hash table for O(1) access
+        # Add error handling around import of advanced data structures
+        try:
+            from utils.advanced_data_structures import (service_bloom_filter,
+                                                        service_hash_table)
+        except ImportError as e:
+            logger.error(f"Failed to import advanced data structures: {e}")
+            # If import fails, proceed directly to database query
+            pass
+        except Exception as e:
+            logger.error(f"Unexpected error importing advanced data structures: {e}")
+            # If import fails, proceed directly to database query
+            pass
+        else:
+            # Only use the advanced data structures if import was successful
+            try:
+                # Use bloom filter to check if the service might exist (probabilistic)
+                if service_bloom_filter.check(service_id):
+                    # Check service hash table first for O(1) lookup
+                    cached_service = service_hash_table.get(service_id)
+                    if cached_service:
+                        # If we have the service in cache, we can return a basic representation
+                        # Or we could return the actual model instance depending on needs
+                        service = (
+                            cls.get_model()
+                            .objects.select_related("category")
+                            .prefetch_related(
+                                "rating_aggregation",  # Use precomputed aggregation
+                                "reviews__user",  # Prefetch user information with reviews
+                            )
+                            .filter(id=service_id, is_active=True)
+                            .first()
+                        )
+
+                        if service:
+                            logger.info(
+                                f"Successfully retrieved service from DB after cache hit: {service.name}"
+                            )
+                        else:
+                            logger.warning(f"Service not found or inactive: {service_id}")
+
+                        return service
+                else:
+                    logger.warning(
+                        f"Service definitely doesn't exist (bloom filter check): {service_id}"
+                    )
+                    return None
+            except Exception as e:
+                logger.error(f"Error using advanced data structures for service {service_id}: {e}")
+                # If there's an error with advanced data structures, proceed to database query
+
+        # If advanced data structures are not available or failed, use direct database query
         try:
             # Get service with precomputed aggregations from ServiceRatingAggregation
             # This is more efficient than calculating on-the-fly
@@ -168,8 +219,8 @@ class ServiceService(BaseService):
                 logger.warning(f"Service not found or inactive: {service_id}")
 
             return service
-        except cls.get_model().DoesNotExist:
-            logger.error(f"Service not found: {service_id}")
+        except Exception as e:
+            logger.error(f"Database query failed for service {service_id}: {e}")
             return None
 
     @classmethod
@@ -187,11 +238,21 @@ class ServiceService(BaseService):
         """
         logger.info(f"Creating new service by user: {user.id}")
 
-        # Validate that user is admin
-        cls._require_staff_permission(user)
+        # Check if user is staff or service provider
+        if not (user.is_staff or user.has_perm("services.add_service")):
+            # Check if user has service provider permissions
+            pass
+
+            user_can_add_services = user.has_perm("services.add_service")
+
+            if not user_can_add_services:
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("You do not have permission to create services")
 
         # Validate service data
-        from utils.validation_utils import validate_positive_price, validate_text_length
+        from utils.validation_utils import (validate_positive_price,
+                                            validate_text_length)
 
         # Validate name
         try:
@@ -260,6 +321,7 @@ class ServiceService(BaseService):
             "description": data["description"],
             "price": data["price"],
             "category_id": data["category"],
+            "owner": user,  # Assign the creating user as the owner
         }
         # Image handling would be done separately
 

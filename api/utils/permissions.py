@@ -2,12 +2,8 @@
 Integrates with django-guardian for object-level permissions.
 """
 
-from api.permissions import (
-    BasePermission,
-    PermissionFactory,
-    PermissionService,
-    UniversalObjectPermission,
-)
+from api.permissions import (BasePermission, PermissionFactory,
+                             PermissionService, UniversalObjectPermission)
 
 # Export all classes and utilities for convenience
 __all__ = [

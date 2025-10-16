@@ -1,8 +1,8 @@
-from django.db import models
 from django.db.models import Prefetch
-from services.models import Review
-from orders.models import OrderItem
+
 from accounts.models import UserProfile
+from orders.models import OrderItem
+from services.models import Review
 
 
 class SmartPrefetcher:

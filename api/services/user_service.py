@@ -9,9 +9,8 @@ from guardian.shortcuts import assign_perm
 from accounts.models import UserProfile
 from utils.email.email_service import EmailService
 
-from .base_service import BaseService
-
 from .base_service import log_service_method  # Add this import
+from .base_service import BaseService
 
 User = get_user_model()
 
@@ -73,7 +72,8 @@ class UserService(BaseService):
 
         """
         # Validate user data
-        from utils.validation_utils import validate_email_format, validate_text_length
+        from utils.validation_utils import (validate_email_format,
+                                            validate_text_length)
 
         # Validate username
         try:
@@ -181,7 +181,8 @@ class UserService(BaseService):
         cls._common_permission_check(user, requesting_user, "change")
 
         # Validate user data
-        from utils.validation_utils import validate_email_format, validate_text_length
+        from utils.validation_utils import (validate_email_format,
+                                            validate_text_length)
 
         # Validate first name if provided
         if data.get("first_name"):
@@ -315,7 +316,8 @@ class UserService(BaseService):
         profile = cls.get_user_profile(user)
 
         # Validate profile data
-        from utils.validation_utils import validate_phone_number, validate_text_length
+        from utils.validation_utils import (validate_phone_number,
+                                            validate_text_length)
 
         # Validate bio if provided
         if data.get("bio"):

@@ -9,7 +9,8 @@ import redis
 from django.conf import settings
 from django.core.cache import cache
 
-from utils.advanced_data_structures import service_bloom_filter, service_hash_table
+from utils.advanced_data_structures import (service_bloom_filter,
+                                            service_hash_table)
 
 
 class CacheBenchmark:
@@ -57,9 +58,11 @@ class CacheBenchmark:
                 "min_operation_time": min(times),
                 "max_operation_time": max(times),
                 "median_operation_time": statistics.median(times),
-                "percentile_95": sorted(times)[int(0.95 * len(times)) - 1]
-                if len(times) > 1
-                else times[0],
+                "percentile_95": (
+                    sorted(times)[int(0.95 * len(times)) - 1]
+                    if len(times) > 1
+                    else times[0]
+                ),
                 "total_time": sum(times),
                 "operations_per_second": iterations / sum(times),
             }

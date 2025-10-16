@@ -7,22 +7,12 @@ This package brings together common serializer functionality in one place for be
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-
 from drf_spectacular.utils import OpenApiTypes, extend_schema_field
 from rest_framework import serializers
-from rest_framework.fields import (
-    BooleanField,
-    CharField,
-    ChoiceField,
-    DateTimeField,
-    DecimalField,
-    EmailField,
-    FileField,
-    ImageField,
-    IntegerField,
-    SlugField,
-    URLField,
-)
+from rest_framework.fields import (BooleanField, CharField, ChoiceField,
+                                   DateTimeField, DecimalField, EmailField,
+                                   FileField, ImageField, IntegerField,
+                                   SlugField, URLField)
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 # Import model classes
@@ -78,7 +68,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     Fields:
     - username: Unique identifier for the user account
     - email: Email address for account verification and communication
-    - password: Account password (minimum 8 characters)
+    - password: Account password (minimum 8 characters, requires uppercase, lowercase, number, and special character)
     - password_confirm: Confirmation of the password
     - first_name: User's first name (optional)
     - last_name: User's last name (optional)
@@ -87,7 +77,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
         min_length=8,
-        help_text="Enter a strong password with at least 8 characters",
+        help_text="Enter a strong password with at least 8 characters, including uppercase, lowercase, number, and special character",
     )
     password_confirm = serializers.CharField(
         write_only=True,
@@ -104,6 +94,30 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
         )
+
+    def validate_password(self, value):
+        """Validate password strength requirements."""
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long")
+        
+        # Check for uppercase letter
+        if not any(char.isupper() for char in value):
+            raise serializers.ValidationError("Password must contain at least one uppercase letter")
+        
+        # Check for lowercase letter
+        if not any(char.islower() for char in value):
+            raise serializers.ValidationError("Password must contain at least one lowercase letter")
+        
+        # Check for digit
+        if not any(char.isdigit() for char in value):
+            raise serializers.ValidationError("Password must contain at least one digit")
+        
+        # Check for special character
+        special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
+        if not any(char in special_chars for char in value):
+            raise serializers.ValidationError("Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
+        
+        return value
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password_confirm"]:

@@ -90,11 +90,9 @@ class AdvancedSearchService:
         """
         # Import PostgreSQL-specific functions for full-text search
         try:
-            from django.contrib.postgres.search import (
-                SearchQuery,
-                SearchRank,
-                SearchVector,
-            )
+            from django.contrib.postgres.search import (SearchQuery,
+                                                        SearchRank,
+                                                        SearchVector)
 
             # Create a search query
             search_query = SearchQuery(query)
@@ -130,7 +128,9 @@ class AdvancedSearchService:
             ).annotate(
                 review_count_val=Count("reviews"),
                 avg_rating_val=Avg("reviews__rating"),
-            )[:limit]
+            )[
+                :limit
+            ]
 
     @staticmethod
     def fast_service_lookup(service_id):
@@ -199,9 +199,9 @@ class AdvancedSearchService:
                         "id": service.id,
                         "description": service.short_desc,
                         "price": float(service.price),
-                        "avg_rating": float(service.avg_rating)
-                        if service.avg_rating
-                        else 0.0,
+                        "avg_rating": (
+                            float(service.avg_rating) if service.avg_rating else 0.0
+                        ),
                     },
                 }
                 for service in services
@@ -231,9 +231,11 @@ class AdvancedSearchService:
                                 "id": service.id,
                                 "description": service.short_desc,
                                 "price": float(service.price),
-                                "avg_rating": float(service.avg_rating)
-                                if service.avg_rating
-                                else 0.0,
+                                "avg_rating": (
+                                    float(service.avg_rating)
+                                    if service.avg_rating
+                                    else 0.0
+                                ),
                             },
                         },
                     )
@@ -294,9 +296,9 @@ class AdvancedSearchService:
 
             if search_key in popular_searches:
                 popular_searches[search_key]["count"] += 1
-                popular_searches[search_key]["last_searched"] = (
-                    timezone.now().isoformat()
-                )
+                popular_searches[search_key][
+                    "last_searched"
+                ] = timezone.now().isoformat()
             else:
                 popular_searches[search_key] = {
                     "query": query,
@@ -306,15 +308,23 @@ class AdvancedSearchService:
                     "results_count": results_count,
                 }
 
-            # Keep only top searches
+            # Keep only top searches using heapq for O(1) access to top MAX_POPULAR_SEARCHES
+            import heapq
+
             if len(popular_searches) > MAX_POPULAR_SEARCHES * 2:
-                # Sort by count and keep top MAX_POPULAR_SEARCHES
-                sorted_searches = sorted(
-                    popular_searches.items(),
-                    key=lambda x: x[1]["count"],
-                    reverse=True,
+                # Use heapq to efficiently keep only the top MAX_POPULAR_SEARCHES items
+                # Convert to list of (count, key, value) tuples for heapq
+                search_items = [
+                    (data["count"], key, data) for key, data in popular_searches.items()
+                ]
+
+                # Get the top MAX_POPULAR_SEARCHES items using heapq.nlargest (O(n log k) where k is MAX_POPULAR_SEARCHES)
+                top_searches = heapq.nlargest(
+                    MAX_POPULAR_SEARCHES, search_items, key=lambda x: x[0]
                 )
-                popular_searches = dict(sorted_searches[:MAX_POPULAR_SEARCHES])
+
+                # Convert back to dictionary
+                popular_searches = {key: data for _, key, data in top_searches}
 
             cache.set(
                 POPULAR_SEARCHES_CACHE_KEY,
@@ -426,7 +436,9 @@ class AdvancedSearchService:
             ).annotate(
                 review_count_val=Count("reviews"),
                 avg_rating_val=Avg("reviews__rating"),
-            )[:limit]
+            )[
+                :limit
+            ]
 
             results = [
                 {
@@ -434,9 +446,9 @@ class AdvancedSearchService:
                     "name": service.name,
                     "description": service.short_desc,
                     "price": float(service.price),
-                    "avg_rating": float(service.avg_rating_val)
-                    if service.avg_rating_val
-                    else 0.0,
+                    "avg_rating": (
+                        float(service.avg_rating_val) if service.avg_rating_val else 0.0
+                    ),
                     "review_count": service.review_count_val,
                     "language": language,  # In a real implementation, this would be from the service data
                 }
@@ -521,7 +533,9 @@ class AdvancedSearchService:
                 ).annotate(
                     review_count_val=Count("reviews"),
                     avg_rating_val=Avg("reviews__rating"),
-                )[:limit]
+                )[
+                    :limit
+                ]
 
                 results = []
                 for service in services:
@@ -531,9 +545,11 @@ class AdvancedSearchService:
                             "name": service.name,
                             "description": service.short_desc,
                             "price": float(service.price),
-                            "avg_rating": float(service.avg_rating_val)
-                            if service.avg_rating_val
-                            else 0.0,
+                            "avg_rating": (
+                                float(service.avg_rating_val)
+                                if service.avg_rating_val
+                                else 0.0
+                            ),
                             "review_count": service.review_count_val,
                         },
                     )
@@ -633,12 +649,20 @@ class AdvancedSearchService:
             # Get popular searches from cache
             popular_searches_cache = cache.get(POPULAR_SEARCHES_CACHE_KEY, {})
 
-            # Get top 10 popular searches from cache
-            top_searches_cache = sorted(
-                popular_searches_cache.items(),
-                key=lambda x: x[1]["count"],
-                reverse=True,
-            )[:10]
+            # Get top 10 popular searches from cache using heapq for O(n log 10) complexity
+            import heapq
+
+            # Convert to list of (count, key, value) tuples for heapq
+            search_items = [
+                (data["count"], key, data)
+                for key, data in popular_searches_cache.items()
+            ]
+
+            # Get the top 10 items using heapq.nlargest (O(n log 10))
+            top_searches_cache = heapq.nlargest(10, search_items, key=lambda x: x[0])
+
+            # Convert back to the expected format
+            top_searches_cache = [(key, data) for _, key, data in top_searches_cache]
 
             return {
                 "total_searches": total_searches,
@@ -662,9 +686,11 @@ class AdvancedSearchService:
                         "query": item.query,
                         "language": item.language,
                         "count": item.search_count,
-                        "last_searched": item.last_searched.isoformat()
-                        if item.last_searched
-                        else None,
+                        "last_searched": (
+                            item.last_searched.isoformat()
+                            if item.last_searched
+                            else None
+                        ),
                     }
                     for item in popular_searches_db
                 ],
@@ -697,9 +723,11 @@ class AdvancedSearchService:
                         "query": item.query,
                         "language": item.language,
                         "count": item.search_count,
-                        "last_searched": item.last_searched.isoformat()
-                        if item.last_searched
-                        else None,
+                        "last_searched": (
+                            item.last_searched.isoformat()
+                            if item.last_searched
+                            else None
+                        ),
                     }
                     for item in popular_searches_db
                 ]
@@ -707,12 +735,19 @@ class AdvancedSearchService:
             # Fallback to cache
             popular_searches = cache.get(POPULAR_SEARCHES_CACHE_KEY, {})
 
-            # Sort by count and return top results
-            sorted_searches = sorted(
-                popular_searches.items(),
-                key=lambda x: x[1]["count"],
-                reverse=True,
-            )[:limit]
+            # Sort by count and return top results using heapq for O(n log k) complexity
+            import heapq
+
+            # Convert to list of (count, key, value) tuples for heapq
+            search_items = [
+                (data["count"], key, data) for key, data in popular_searches.items()
+            ]
+
+            # Get the top 'limit' items using heapq.nlargest (O(n log k) where k is limit)
+            top_searches = heapq.nlargest(limit, search_items, key=lambda x: x[0])
+
+            # Convert back to the expected format
+            sorted_searches = [(key, data) for _, key, data in top_searches]
 
             return [
                 {

@@ -9,7 +9,8 @@ from django.core.management.base import BaseCommand
 from accounts.models import User
 from services.models import Service
 from utils.cache_utils import warm_user_related_cache
-from utils.caching_strategy import cache_warming_strategy, scheduled_cache_warming
+from utils.caching_strategy import (cache_warming_strategy,
+                                    scheduled_cache_warming)
 
 # Configure logger
 logger = logging.getLogger(__name__)

@@ -1,79 +1,99 @@
 """Tests for the UniversalObjectPermission class"""
 
+import pytest
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 from rest_framework.test import APIRequestFactory
 
-from .permissions import (
-    UniversalObjectPermission,
-    is_owner,
-)
+from .permissions import UniversalObjectPermission, is_owner
 
 User = get_user_model()
 
 
-class UniversalObjectPermissionTestCase(TestCase):
-    """Test cases for UniversalObjectPermission class"""
+@pytest.fixture
+def test_users():
+    """Create test users for use in tests"""
+    user = User.objects.create_user(
+        username="testuser_perm",
+        email="test_perm@example.com",
+        password="testpass123",
+    )
+    other_user = User.objects.create_user(
+        username="otheruser_perm",
+        email="other_perm@example.com",
+        password="testpass123",
+    )
+    admin_user = User.objects.create_user(
+        username="adminuser_perm",
+        email="admin_perm@example.com",
+        password="testpass123",
+        is_staff=True,
+    )
+    return user, other_user, admin_user
 
-    def setUp(self):
-        """Set up test data"""
-        self.factory = APIRequestFactory()
 
-        # Create users
-        self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123",
-        )
-        self.other_user = User.objects.create_user(
-            username="otheruser",
-            email="other@example.com",
-            password="testpass123",
-        )
-        self.admin_user = User.objects.create_user(
-            username="adminuser",
-            email="admin@example.com",
-            password="testpass123",
-            is_staff=True,
-        )
+@pytest.mark.django_db
+def test_is_owner_helper_function(test_users):
+    """Test the is_owner helper function"""
+    user, other_user, _ = test_users
 
-    def test_is_owner_helper_function(self):
-        """Test the is_owner helper function"""
+    # Create a simple object with user attribute
+    class TestObject:
+        def __init__(self, user):
+            self.user = user
 
-        # Create a simple object with user attribute
-        class TestObject:
-            def __init__(self, user):
-                self.user = user
+    obj_with_owner = TestObject(user)
+    obj_without_owner = TestObject(other_user)
 
-        obj_with_owner = TestObject(self.user)
-        obj_without_owner = TestObject(self.other_user)
+    # Test ownership check
+    assert is_owner(user, obj_with_owner)
+    assert not is_owner(other_user, obj_with_owner)
+    assert not is_owner(user, obj_without_owner)
 
-        # Test ownership check
-        self.assertTrue(is_owner(self.user, obj_with_owner))
-        self.assertFalse(is_owner(self.other_user, obj_with_owner))
-        self.assertFalse(is_owner(self.user, obj_without_owner))
 
-    def test_universal_permission_authenticated_user_get(self):
-        """Test that authenticated users can make GET requests"""
-        request = self.factory.get("/")
-        request.user = self.user
+@pytest.mark.django_db
+def test_universal_permission_authenticated_user_get():
+    """Test that authenticated users can make GET requests"""
+    factory = APIRequestFactory()
 
-        permission = UniversalObjectPermission()
-        self.assertTrue(permission.has_permission(request, None))
+    user = User.objects.create_user(
+        username="testuser_perm_get",
+        email="test_perm_get@example.com",
+        password="testpass123",
+    )
 
-    def test_universal_permission_unauthenticated_user_get(self):
-        """Test that unauthenticated users cannot make GET requests"""
-        request = self.factory.get("/")
-        request.user = None
+    request = factory.get("/")
+    request.user = user
 
-        permission = UniversalObjectPermission()
-        self.assertFalse(permission.has_permission(request, None))
+    permission = UniversalObjectPermission()
+    assert permission.has_permission(request, None)
 
-    def test_universal_permission_authenticated_user_post(self):
-        """Test that authenticated users can make POST requests"""
-        request = self.factory.post("/")
-        request.user = self.user
 
-        permission = UniversalObjectPermission()
-        # For POST requests without a model_class, should allow authenticated users
-        self.assertTrue(permission.has_permission(request, None))
+@pytest.mark.django_db
+def test_universal_permission_unauthenticated_user_get():
+    """Test that unauthenticated users cannot make GET requests"""
+    factory = APIRequestFactory()
+
+    request = factory.get("/")
+    request.user = None
+
+    permission = UniversalObjectPermission()
+    assert not permission.has_permission(request, None)
+
+
+@pytest.mark.django_db
+def test_universal_permission_authenticated_user_post():
+    """Test that authenticated users can make POST requests"""
+    factory = APIRequestFactory()
+
+    user = User.objects.create_user(
+        username="testuser_perm_post",
+        email="test_perm_post@example.com",
+        password="testpass123",
+    )
+
+    request = factory.post("/")
+    request.user = user
+
+    permission = UniversalObjectPermission()
+    # For POST requests without a model_class, should allow authenticated users
+    assert permission.has_permission(request, None)

@@ -3,12 +3,12 @@ import logging
 
 import redis
 from django.conf import settings
-
 # Import pydantic for validation
 from pydantic import BaseModel
 
 from orders.models import Order
 from services.models import Service
+from utils.advanced_data_structures.hash_table import service_hash_table
 
 from .base_service import BaseService, log_service_method
 
@@ -96,7 +96,7 @@ class CartService(BaseService):
     @classmethod
     @log_service_method
     def add_to_cart(cls, user, service_id, quantity):
-        """Add service to cart using lock-free implementation."""
+        """Add service to cart with O(1) complexity using hash map for items."""
         user_id = user.id
         if not cls._is_redis_available():
             logger.debug(
@@ -111,28 +111,51 @@ class CartService(BaseService):
             logger.error(f"Error getting cart for user {user_id}: {e!s}")
             return cls._add_to_cart_in_database(user_id, service_id, quantity)
 
-        item_exists = False
-        for item in cart["items"]:
-            if item["service_id"] == service_id:
-                item["quantity"] += quantity
-                item_exists = True
-                break
+        # Convert items list to hash map for O(1) lookup
+        items_map = {item["service_id"]: item for item in cart["items"]}
 
-        if not item_exists:
+        # O(1) lookup and update
+        if service_id in items_map:
+            items_map[service_id]["quantity"] += quantity
+        else:
+            # Add new item
             try:
-                service = Service.objects.get(id=service_id, is_active=True)
-                cart["items"].append(
-                    {
-                        "service_id": service_id,
-                        "quantity": quantity,
-                        "price": str(service.price),
-                    },
-                )
+                # Try to get service from hash table for O(1) lookup
+                service_data = service_hash_table.get(str(service_id))
+
+                if service_data:
+                    # Got service data from hash table
+                    service_price = service_data.get("price")
+                else:
+                    # Fall back to database lookup and cache the result
+                    service = Service.objects.get(id=service_id, is_active=True)
+                    service_price = str(service.price)
+
+                    # Cache service data in hash table for future O(1) lookups
+                    service_hash_table.set(
+                        str(service_id),
+                        {
+                            "id": service.id,
+                            "name": service.name,
+                            "price": service_price,
+                            "is_active": service.is_active,
+                        },
+                    )
+
+                new_item = {
+                    "service_id": service_id,
+                    "quantity": quantity,
+                    "price": service_price,
+                }
+                items_map[service_id] = new_item
             except Service.DoesNotExist:
                 raise ValueError("Service not found or not active")
             except Exception as e:
                 logger.error(f"Error getting service {service_id}: {e!s}")
                 raise ValueError("Error retrieving service information")
+
+        # Convert back to list
+        cart["items"] = list(items_map.values())
 
         from django.utils import timezone
 
@@ -162,9 +185,7 @@ class CartService(BaseService):
     @classmethod
     @log_service_method
     def remove_from_cart(cls, user_id, service_id):
-        """Remove item from cart in Redis.
-        If Redis is unavailable, update database directly.
-        """
+        """Remove item from cart with O(1) complexity using hash map."""
         if not cls._is_redis_available():
             logger.debug(
                 f"Redis not available for user {user_id}, removing from cart in database",
@@ -178,13 +199,17 @@ class CartService(BaseService):
             logger.error(f"Error getting cart for user {user_id}: {e!s}")
             return cls._remove_from_cart_in_database(user_id, service_id)
 
-        original_item_count = len(cart["items"])
-        cart["items"] = [
-            item for item in cart["items"] if item["service_id"] != service_id
-        ]
+        # Convert items list to hash map for O(1) removal
+        items_map = {item["service_id"]: item for item in cart["items"]}
 
-        if len(cart["items"]) == original_item_count:
+        # O(1) removal
+        if service_id in items_map:
+            del items_map[service_id]
+            cart["items"] = list(items_map.values())
+        else:
+            # Item not found, return early
             logger.debug(f"Item {service_id} not found in cart for user {user_id}")
+            return cart
 
         from django.utils import timezone
 
@@ -211,7 +236,7 @@ class CartService(BaseService):
     @classmethod
     @log_service_method
     def update_quantity(cls, user, service_id, quantity):
-        """Update cart item quantity using lock-free implementation."""
+        """Update cart item quantity with O(1) complexity using hash map."""
         user_id = user.id
         if not cls._is_redis_available():
             logger.debug(
@@ -226,12 +251,15 @@ class CartService(BaseService):
             logger.error(f"Error getting cart for user {user_id}: {e!s}")
             return cls._update_cart_in_database(user_id, service_id, quantity)
 
-        item_updated = False
-        for item in cart["items"]:
-            if item["service_id"] == service_id:
-                item["quantity"] = quantity
-                item_updated = True
-                break
+        # Convert items list to hash map for O(1) lookup and update
+        items_map = {item["service_id"]: item for item in cart["items"]}
+
+        # O(1) lookup and update
+        if service_id in items_map:
+            items_map[service_id]["quantity"] = quantity
+            item_updated = True
+        else:
+            item_updated = False
 
         if not item_updated:
             logger.warning(
@@ -239,19 +267,42 @@ class CartService(BaseService):
             )
             # If item not found, add it with the requested quantity
             try:
-                service = Service.objects.get(id=service_id, is_active=True)
-                cart["items"].append(
-                    {
-                        "service_id": service_id,
-                        "quantity": quantity,
-                        "price": str(service.price),
-                    },
-                )
+                # Try to get service from hash table for O(1) lookup
+                service_data = service_hash_table.get(str(service_id))
+
+                if service_data:
+                    # Got service data from hash table
+                    service_price = service_data.get("price")
+                else:
+                    # Fall back to database lookup and cache the result
+                    service = Service.objects.get(id=service_id, is_active=True)
+                    service_price = str(service.price)
+
+                    # Cache service data in hash table for future O(1) lookups
+                    service_hash_table.set(
+                        str(service_id),
+                        {
+                            "id": service.id,
+                            "name": service.name,
+                            "price": service_price,
+                            "is_active": service.is_active,
+                        },
+                    )
+
+                new_item = {
+                    "service_id": service_id,
+                    "quantity": quantity,
+                    "price": service_price,
+                }
+                items_map[service_id] = new_item
             except Service.DoesNotExist:
                 raise ValueError("Service not found or not active")
             except Exception as e:
                 logger.error(f"Error getting service {service_id}: {e!s}")
                 raise ValueError("Error retrieving service information")
+
+        # Convert back to list
+        cart["items"] = list(items_map.values())
 
         from django.utils import timezone
 
@@ -379,12 +430,16 @@ class CartService(BaseService):
                     }
                     for item in order_instance.items.all()
                 ],
-                "created_at": order_instance.created.isoformat()
-                if order_instance.created
-                else None,
-                "updated_at": order_instance.modified.isoformat()
-                if order_instance.modified
-                else None,
+                "created_at": (
+                    order_instance.created.isoformat()
+                    if order_instance.created
+                    else None
+                ),
+                "updated_at": (
+                    order_instance.modified.isoformat()
+                    if order_instance.modified
+                    else None
+                ),
             }
             # Sync to Redis if available
             if cls._is_redis_available():
@@ -460,12 +515,35 @@ class CartService(BaseService):
 
             # Add items from Redis to database
             for item in redis_items:
-                service = Service.objects.get(id=item["service_id"])
+                # Try to get service from hash table for O(1) lookup
+                service_data = service_hash_table.get(str(item["service_id"]))
+
+                if service_data:
+                    # Got service data from hash table
+                    service_price = service_data.get("price")
+                    # Create service object from cached data
+                    service = Service(id=service_data["id"], name=service_data["name"])
+                else:
+                    # Fall back to database lookup and cache the result
+                    service = Service.objects.get(id=item["service_id"])
+                    service_price = str(service.price)
+
+                    # Cache service data in hash table for future O(1) lookups
+                    service_hash_table.set(
+                        str(item["service_id"]),
+                        {
+                            "id": service.id,
+                            "name": service.name,
+                            "price": service_price,
+                            "is_active": service.is_active,
+                        },
+                    )
+
                 OrderItem.objects.create(
                     order=cart_order,
                     service=service,
                     quantity=item["quantity"],
-                    unit_price=Decimal(item["price"]),  # noqa: F821
+                    unit_price=Decimal(service_price),  # noqa: F821
                 )
 
             # Update order timestamps

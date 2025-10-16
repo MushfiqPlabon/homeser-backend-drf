@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from decouple import Config, RepositoryEnv, RepositoryEmpty
+from decouple import Config, RepositoryEmpty, RepositoryEnv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -13,8 +13,9 @@ env_file_path = BASE_DIR / ".env"
 if env_file_path.exists():
     # To ensure .env file takes precedence over environment variables,
     # we'll create a custom config class that checks the .env file first
-    from decouple import RepositoryEnv, RepositoryEmpty
     import os
+
+    from decouple import RepositoryEmpty, RepositoryEnv
 
     class EnvFileFirstConfig:
         def __init__(self, env_file_path):
@@ -92,7 +93,7 @@ POPULATE_ADVANCED_STRUCTURES_ON_STARTUP = config(
 # Vercel deployment settings
 VERCEL_URL = os.environ.get("VERCEL_URL")
 if VERCEL_URL:
-    ALLOWED_HOSTS = [VERCEL_URL, "localhost", "127.0.0.1", ".vercel.app"]
+    ALLOWED_HOSTS = [VERCEL_URL, "localhost", "127.0.0.1", "testserver", ".vercel.app"]
     CSRF_TRUSTED_ORIGINS = [f"https://{VERCEL_URL}", "https://*.vercel.app"]
 else:
     ALLOWED_HOSTS = config(
@@ -210,12 +211,21 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 8,
+        }
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 12,
+        }
     },
 ]
 
@@ -260,13 +270,62 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",  # Only return JSON by default
     ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+        "login_attempts": "5/hour",  # Specific rate limit for login attempts to prevent brute force
+    },
 }
 
 # JWT Configuration
+from datetime import timedelta
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  # Reduced from 60 to 15 minutes for better security
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),    # Reduced from 7 to 1 day 
     "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,               # Add refresh tokens to blacklist after use
+    "UPDATE_LAST_LOGIN": True,                      # Update last login time
+    
+    # Token identifiers for better security
+    "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
+    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=15),
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+    
+    # Security enhancements
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": config("SIGNING_KEY", default="django-insecure-change-me-in-production"),
+    "VERIFYING_KEY": "",
+    "AUDIENCE": None,
+    "ISSUER": None,
+    "JWK_URL": None,
+    "USER_ID_FIELD": "id",
+    "USER_ID_CLAIM": "user_id",
+    "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
+    
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "TOKEN_TYPE_CLAIM": "token_type",
+    "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
+    
+    "JTI_CLAIM": "jti",  # JWT ID for token tracking
+    
+    # Custom claims
+    "TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainPairSerializer",
+    "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
+    "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
+    
+    # Cookie settings for httpOnly cookies
+    "AUTH_COOKIE": "access_token",  # Name of the access token cookie
+    "REFRESH_COOKIE": "refresh_token",  # Name of the refresh token cookie
+    "AUTH_COOKIE_DOMAIN": None,  # Domain for the cookie (should be set in production)
+    "AUTH_COOKIE_SECURE": config("AUTH_COOKIE_SECURE", default=False, cast=bool),  # Only send over HTTPS
+    "AUTH_COOKIE_HTTP_ONLY": True,  # Prevent XSS attacks
+    "AUTH_COOKIE_PATH": "/",  # Cookie path
+    "AUTH_COOKIE_SAMESITE": "Lax",  # CSRF protection
 }
 
 # Email Configuration
@@ -281,29 +340,31 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="webmaster@localhost")
 # Admin email for notifications
 ADMIN_EMAIL = config("ADMIN_EMAIL", default=DEFAULT_FROM_EMAIL)
 
-# Cache Configuration
-if VERCEL_URL:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.dummy.DummyCache",
-        }
-    }
-else:
-    CACHES = {
-        "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
-            "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
-            "OPTIONS": {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            },
-        },
-    }
-
 # Cache timeout from environment or default to 15 minutes
 CACHE_TTL = config("CACHE_TTL", default=900, cast=int)
 
+# Cache Configuration - Always use Redis with serverless-optimized settings
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 20,  # Limit connections for serverless
+                "retry_on_timeout": True,
+                "health_check_interval": 30,
+                "socket_keepalive": True,
+                "socket_keepalive_options": {},
+            },
+        },
+        "KEY_PREFIX": "homeser",  # Use a consistent key prefix
+        "TIMEOUT": CACHE_TTL,
+    },
+}
+
 # Cachalot settings to automatically cache and invalidate ORM queries
-CACHALOT_ENABLED = not VERCEL_URL
+CACHALOT_ENABLED = True
 CACHALOT_CACHE = "default"
 # Tables that should never be cached (useful for frequently updated tables)
 CACHALOT_UNCACHABLE_TABLES = [
@@ -354,6 +415,10 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
 CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
 X_FRAME_OPTIONS = "DENY"
+
+# Additional Security Headers
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # SSLCOMMERZ Configuration
 SSLCOMMERZ_STORE_ID = config("SSLCOMMERZ_STORE_ID", default="testbox")

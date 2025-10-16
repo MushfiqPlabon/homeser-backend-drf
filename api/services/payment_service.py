@@ -10,9 +10,8 @@ from orders.models import Order
 from payments.models import Payment, PaymentLog
 from utils.email.email_service import EmailService
 
-from .base_service import BaseService
-
 from .base_service import log_service_method  # Add this import
+from .base_service import BaseService
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -298,7 +297,16 @@ class PaymentService(BaseService):
     @classmethod
     @log_service_method
     def _get_basic_statistics(cls, payments):
-        """Get basic payment statistics."""
+        """Get basic payment statistics from the payment records.
+
+        Args:
+            payments (QuerySet): Payment queryset to calculate statistics for
+
+        Returns:
+            dict: Dictionary containing payment statistics including total payments,
+                  total amount, successful payments, failed payments, refunded payments,
+                  disputed payments, and success rate
+        """
         from django.db.models import Sum
 
         try:

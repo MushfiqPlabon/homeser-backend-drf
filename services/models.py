@@ -3,25 +3,19 @@ from decimal import Decimal
 from typing import Optional
 
 from cloudinary.models import CloudinaryField
+from django.conf import settings
 from django.db import models
 from django.db.models.base import ModelBase
-from django_lifecycle import (
-    AFTER_CREATE,
-    AFTER_DELETE,
-    AFTER_UPDATE,
-    LifecycleModel,
-    hook,
-)
+from django_lifecycle import (AFTER_CREATE, AFTER_DELETE, AFTER_UPDATE,
+                              LifecycleModel, hook)
 from model_utils.managers import QueryManager
 
 from homeser.base_models import BaseReview, NamedSluggedModel
-from utils.validation_package import (
-    validate_image_aspect_ratio,
-    validate_image_file_extension,
-    validate_image_file_size,
-    validate_positive_price,
-    validate_text_length,
-)
+from utils.validation_package import (validate_image_aspect_ratio,
+                                      validate_image_file_extension,
+                                      validate_image_file_size,
+                                      validate_positive_price,
+                                      validate_text_length)
 
 
 def validate_service_description(value):
@@ -76,6 +70,12 @@ class Service(LifecycleModel, NamedSluggedModel):
     """Individual services offered"""
 
     # Remove name field as it's now in NamedSluggedModel
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="services",
+        db_index=True,
+    )
     category = models.ForeignKey(
         ServiceCategory,
         on_delete=models.CASCADE,
@@ -173,27 +173,6 @@ class Service(LifecycleModel, NamedSluggedModel):
 
     def save(self, *args, **kwargs):
         """Save the service and update aggregated ratings."""
-        # Calculate average rating and count when saving
-        # This is a simple implementation; in production, consider using a more efficient approach
-        if self.pk:  # Only for existing objects
-            from django.db.models import Avg, Count
-
-            # Update rating aggregation
-            aggregation_data = Review.objects.filter(service=self).aggregate(
-                avg_rating=Avg("rating"),
-                count=Count("id"),
-            )
-
-            if aggregation_data["avg_rating"] is not None:
-                self.avg_rating = float(aggregation_data["avg_rating"])
-            else:
-                self.avg_rating = 0.0
-
-            if aggregation_data["count"] is not None:
-                self.review_count = aggregation_data["count"]
-            else:
-                self.review_count = 0
-
         # Ensure category is provided
         if not self.category:
             raise ValueError("Category is required")
@@ -231,6 +210,7 @@ class Service(LifecycleModel, NamedSluggedModel):
                 return
 
             from django.db.models import Avg, Count
+
             from .models import ServiceRatingAggregation
 
             # Calculate the new average and count
@@ -244,9 +224,11 @@ class Service(LifecycleModel, NamedSluggedModel):
                 ServiceRatingAggregation.objects.get_or_create(
                     service=self,
                     defaults={
-                        "average": float(aggregation["avg_rating"])
-                        if aggregation["avg_rating"] is not None
-                        else 0,
+                        "average": (
+                            float(aggregation["avg_rating"])
+                            if aggregation["avg_rating"] is not None
+                            else 0
+                        ),
                         "count": aggregation["count"] or 0,
                     },
                 )
@@ -278,10 +260,8 @@ class Service(LifecycleModel, NamedSluggedModel):
             )
 
     @hook(AFTER_CREATE)
-    @hook(AFTER_UPDATE)
-    @hook(AFTER_DELETE)
-    def invalidate_service_cache(self):
-        """Invalidate service list cache when a service is created, updated, or deleted."""
+    def update_advanced_data_structures_on_create(self):
+        """Update advanced data structures when a service is created."""
         from cachalot.api import invalidate as cachalot_invalidate
 
         # Use django-cachalot for automatic cache invalidation
@@ -290,10 +270,61 @@ class Service(LifecycleModel, NamedSluggedModel):
         # Also update our advanced data structures
         try:
             # Import here to avoid circular imports
-            from utils.advanced_data_structures import (
-                service_hash_table,
-                service_name_trie,
+            from utils.advanced_data_structures import (service_bloom_filter,
+                                                        service_hash_table,
+                                                        service_name_trie)
+
+            # Update individual data structures for the service
+            service_data = {
+                "id": self.id,
+                "name": self.name,
+                "description": self.description,
+                "price": float(self.price),
+                "image_url": self.image_url,
+                "avg_rating": float(self.avg_rating) or 0,
+                "review_count": self.review_count or 0,
+            }
+
+            # Update hash table
+            service_hash_table.update_service_data(self.id, service_data)
+
+            # Update bloom filter to include this new service
+            service_bloom_filter.add(self.id)
+
+            # Update trie
+            service_name_trie.update_service_data(
+                self.name,
+                {
+                    "id": self.id,
+                    "description": getattr(self, "short_desc", ""),
+                    "price": float(self.price),
+                    "avg_rating": float(self.avg_rating) if self.avg_rating else 0.0,
+                },
             )
+
+            # Note: For segment tree, we would need to know the index of the service
+            # This is more complex and would require maintaining a mapping
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Error updating advanced data structures for service {self.id}: {e}",
+            )
+
+    @hook(AFTER_UPDATE)
+    def update_advanced_data_structures_on_update(self):
+        """Update advanced data structures when a service is updated."""
+        from cachalot.api import invalidate as cachalot_invalidate
+
+        # Use django-cachalot for automatic cache invalidation
+        cachalot_invalidate(Service)
+
+        # Also update our advanced data structures
+        try:
+            # Import here to avoid circular imports
+            from utils.advanced_data_structures import (service_hash_table,
+                                                        service_name_trie)
 
             # Update individual data structures for the service
             service_data = {
@@ -328,6 +359,31 @@ class Service(LifecycleModel, NamedSluggedModel):
             logger = logging.getLogger(__name__)
             logger.error(
                 f"Error updating advanced data structures for service {self.id}: {e}",
+            )
+
+    @hook(AFTER_DELETE)
+    def update_advanced_data_structures_on_delete(self):
+        """Handle advanced data structures when a service is deleted."""
+        from cachalot.api import invalidate as cachalot_invalidate
+
+        # Use django-cachalot for automatic cache invalidation
+        cachalot_invalidate(Service)
+
+        # For deleted services, we primarily need to update cache invalidation
+        # Bloom filter doesn't need explicit removal (false positives are acceptable)
+        # Hash table and trie entries might need to be removed, but this is complex after deletion
+        try:
+            # Import here to avoid circular imports
+            from utils.advanced_data_structures import service_hash_table
+
+            # Remove from hash table if possible (using the ID before it's gone)
+            service_hash_table.delete(self.id)
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(
+                f"Error handling advanced data structures for deleted service {self.id}: {e}",
             )
 
 
