@@ -35,11 +35,9 @@ class BaseViewMixin:
         """
         from rest_framework import serializers
         from rest_framework.exceptions import (AuthenticationFailed,
-                                               NotAuthenticated,
-                                               PermissionDenied,
-                                               NotFound,
                                                MethodNotAllowed,
-                                               ParseError)
+                                               NotAuthenticated, NotFound,
+                                               ParseError, PermissionDenied)
 
         # Handle authentication and permission exceptions
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
@@ -93,11 +91,9 @@ class BaseViewSet(viewsets.ModelViewSet, BaseViewMixin):
         """Handle exceptions with proper error formatting."""
         from rest_framework import serializers
         from rest_framework.exceptions import (AuthenticationFailed,
-                                               NotAuthenticated,
-                                               PermissionDenied,
-                                               NotFound,
                                                MethodNotAllowed,
-                                               ParseError)
+                                               NotAuthenticated, NotFound,
+                                               ParseError, PermissionDenied)
 
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
             return format_error_response(
@@ -117,7 +113,9 @@ class BaseViewSet(viewsets.ModelViewSet, BaseViewMixin):
                 message=str(exception),
                 status_code=status.HTTP_404_NOT_FOUND,
             )
-        if isinstance(exception, (MethodNotAllowed, ParseError, PermissionError, ValueError)):
+        if isinstance(
+            exception, (MethodNotAllowed, ParseError, PermissionError, ValueError)
+        ):
             return format_error_response(
                 error_code="BAD_REQUEST",
                 message=str(exception),

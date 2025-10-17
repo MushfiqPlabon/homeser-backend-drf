@@ -180,9 +180,11 @@ class EmailAnalytics:
         cutoff_date = timezone.now() - timedelta(days=days)
 
         # Group by date
+        from django.db.models import Date
+
         trend_data = (
             EmailTracking.objects.filter(sent_at__gte=cutoff_date)
-            .extra(select={"date": "date(sent_at)"})
+            .annotate(date=Date("sent_at"))
             .values("date")
             .annotate(count=models.Count("id"))
             .order_by("date")

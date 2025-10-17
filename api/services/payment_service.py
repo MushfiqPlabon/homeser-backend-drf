@@ -126,11 +126,43 @@ class PaymentService(BaseService):
 
                 process_successful_payment(payment.id)
 
+                # Send WebSocket notification for successful payment
+                try:
+                    from ..utils.websocket_utils import send_payment_update
+
+                    send_payment_update(
+                        payment.order.user.id,
+                        payment.id,
+                        "completed",
+                        f"Payment for order #{payment.order.id} confirmed successfully",
+                    )
+                except Exception as e:
+                    # Log the error but don't fail the operation
+                    logger.error(
+                        f"Failed to send WebSocket payment notification for payment {payment.id}: {e}"
+                    )
+
                 return {
                     "status": "success",
                     "message": "Payment IPN received successfully",
                 }
             # Manual logger.warning removed
+            # Send WebSocket notification for failed payment
+            try:
+                from ..utils.websocket_utils import send_payment_update
+
+                send_payment_update(
+                    payment.order.user.id,
+                    payment.id,
+                    "failed",
+                    f"Payment for order #{payment.order.id} failed",
+                )
+            except Exception as e:
+                # Log the error but don't fail the operation
+                logger.error(
+                    f"Failed to send WebSocket payment notification for failed payment {payment.id}: {e}"
+                )
+
             return {
                 "status": "failed",
                 "error": result.get("error", "Payment validation failed"),
@@ -221,6 +253,22 @@ class PaymentService(BaseService):
             # Log and notify refund
             cls._log_and_notify_refund(payment, order, amount_to_refund, reason, user)
 
+            # Send WebSocket notification for refund
+            try:
+                from ..utils.websocket_utils import send_payment_update
+
+                send_payment_update(
+                    payment.order.user.id,
+                    payment.id,
+                    "refunded",
+                    f"Refund processed for payment {payment.id}",
+                )
+            except Exception as e:
+                # Log the error but don't fail the operation
+                logger.error(
+                    f"Failed to send WebSocket payment notification for refund {payment.id}: {e}"
+                )
+
             # Manual logger.info removed
 
             return {
@@ -279,6 +327,22 @@ class PaymentService(BaseService):
             except Exception:
                 # Manual logger.error removed
                 pass
+
+            # Send WebSocket notification for dispute
+            try:
+                from ..utils.websocket_utils import send_payment_update
+
+                send_payment_update(
+                    payment.order.user.id,
+                    payment.id,
+                    "disputed",
+                    f"Dispute initiated for payment {payment.id}",
+                )
+            except Exception as e:
+                # Log the error but don't fail the operation
+                logger.error(
+                    f"Failed to send WebSocket payment notification for dispute {payment.id}: {e}"
+                )
 
             # Manual logger.info removed
 
@@ -362,8 +426,10 @@ class PaymentService(BaseService):
 
         # Daily trend
         try:
+            from django.db.models import Date
+
             daily_trend = (
-                payments.extra(select={"date": "date(created_at)"})
+                payments.annotate(date=Date("created_at"))
                 .values("date")
                 .annotate(count=Count("id"), total_amount=Sum("amount"))
                 .order_by("date")

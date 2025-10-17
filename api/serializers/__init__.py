@@ -98,25 +98,35 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate_password(self, value):
         """Validate password strength requirements."""
         if len(value) < 8:
-            raise serializers.ValidationError("Password must be at least 8 characters long")
-        
+            raise serializers.ValidationError(
+                "Password must be at least 8 characters long"
+            )
+
         # Check for uppercase letter
         if not any(char.isupper() for char in value):
-            raise serializers.ValidationError("Password must contain at least one uppercase letter")
-        
+            raise serializers.ValidationError(
+                "Password must contain at least one uppercase letter"
+            )
+
         # Check for lowercase letter
         if not any(char.islower() for char in value):
-            raise serializers.ValidationError("Password must contain at least one lowercase letter")
-        
+            raise serializers.ValidationError(
+                "Password must contain at least one lowercase letter"
+            )
+
         # Check for digit
         if not any(char.isdigit() for char in value):
-            raise serializers.ValidationError("Password must contain at least one digit")
-        
+            raise serializers.ValidationError(
+                "Password must contain at least one digit"
+            )
+
         # Check for special character
         special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
         if not any(char in special_chars for char in value):
-            raise serializers.ValidationError("Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)")
-        
+            raise serializers.ValidationError(
+                "Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)"
+            )
+
         return value
 
     def validate(self, attrs):

@@ -363,6 +363,10 @@ class UserService(BaseService):
         if "address" in data:
             profile.address = data["address"]
 
+        # Update profile picture if provided
+        if "profile_pic" in data:
+            profile.profile_pic = data["profile_pic"]
+
         # Save profile
         profile.save()
 

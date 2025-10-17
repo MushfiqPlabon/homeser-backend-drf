@@ -597,12 +597,14 @@ class AdvancedSearchService:
             )
 
             # Get hourly distribution
+            from django.db.models import ExtractHour
+
             hourly_stats = (
                 SearchAnalytics.objects.filter(
                     created_at__gte=start_date,
                     created_at__lte=end_date,
                 )
-                .extra(select={"hour": "EXTRACT(hour FROM created_at)"})
+                .annotate(hour=ExtractHour("created_at"))
                 .values("hour")
                 .annotate(count=Count("id"))
                 .order_by("hour")

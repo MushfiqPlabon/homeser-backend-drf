@@ -120,6 +120,7 @@ INSTALLED_APPS = [
     "drf_spectacular",  # Add this for Swagger/OpenAPI documentation
     "guardian",  # Add django-guardian for RBAC
     "django_ratelimit",  # Add django-ratelimit for rate limiting
+    "channels",  # Add channels for WebSocket support
     # Local apps
     "accounts",
     "services",
@@ -168,6 +169,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "homeser.wsgi.app"
+ASGI_APPLICATION = "homeser.asgi.application"
 
 # Database
 # Always use SQLite for local development unless explicitly overridden
@@ -213,7 +215,7 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
         "OPTIONS": {
             "min_length": 8,
-        }
+        },
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -225,7 +227,7 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
         "OPTIONS": {
             "min_length": 12,
-        }
+        },
     },
 ]
 
@@ -278,27 +280,29 @@ REST_FRAMEWORK = {
         "anon": "100/hour",
         "user": "1000/hour",
         "login_attempts": "5/hour",  # Specific rate limit for login attempts to prevent brute force
+        "registration": "5/hour",  # Rate limit for registration attempts
     },
 }
 
 # JWT Configuration
-from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  # Reduced from 60 to 15 minutes for better security
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),    # Reduced from 7 to 1 day 
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=15
+    ),  # Reduced from 60 to 15 minutes for better security
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),  # Reduced from 7 to 1 day
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,               # Add refresh tokens to blacklist after use
-    "UPDATE_LAST_LOGIN": True,                      # Update last login time
-    
+    "BLACKLIST_AFTER_ROTATION": True,  # Add refresh tokens to blacklist after use
+    "UPDATE_LAST_LOGIN": True,  # Update last login time
     # Token identifiers for better security
     "SLIDING_TOKEN_REFRESH_EXP_CLAIM": "refresh_exp",
     "SLIDING_TOKEN_LIFETIME": timedelta(minutes=15),
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
-    
     # Security enhancements
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": config("SIGNING_KEY", default="django-insecure-change-me-in-production"),
+    "SIGNING_KEY": config(
+        "SIGNING_KEY", default="your-very-secure-signing-key-change-in-production"
+    ),
     "VERIFYING_KEY": "",
     "AUDIENCE": None,
     "ISSUER": None,
@@ -306,23 +310,21 @@ SIMPLE_JWT = {
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
     "USER_AUTHENTICATION_RULE": "rest_framework_simplejwt.authentication.default_user_authentication_rule",
-    
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "TOKEN_TYPE_CLAIM": "token_type",
     "TOKEN_USER_CLASS": "rest_framework_simplejwt.models.TokenUser",
-    
     "JTI_CLAIM": "jti",  # JWT ID for token tracking
-    
     # Custom claims
     "TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainPairSerializer",
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
-    
     # Cookie settings for httpOnly cookies
     "AUTH_COOKIE": "access_token",  # Name of the access token cookie
     "REFRESH_COOKIE": "refresh_token",  # Name of the refresh token cookie
     "AUTH_COOKIE_DOMAIN": None,  # Domain for the cookie (should be set in production)
-    "AUTH_COOKIE_SECURE": config("AUTH_COOKIE_SECURE", default=False, cast=bool),  # Only send over HTTPS
+    "AUTH_COOKIE_SECURE": config(
+        "AUTH_COOKIE_SECURE", default=False, cast=bool
+    ),  # Only send over HTTPS
     "AUTH_COOKIE_HTTP_ONLY": True,  # Prevent XSS attacks
     "AUTH_COOKIE_PATH": "/",  # Cookie path
     "AUTH_COOKIE_SAMESITE": "Lax",  # CSRF protection
@@ -363,6 +365,18 @@ CACHES = {
     },
 }
 
+# Channel layer configuration for WebSockets
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [config("REDIS_URL", default="redis://127.0.0.1:6379/1")],
+            "capacity": 100,  # Number of messages to hold in the channel layer
+            "expiry": 60,  # Number of seconds to hold messages
+        },
+    },
+}
+
 # Cachalot settings to automatically cache and invalidate ORM queries
 CACHALOT_ENABLED = True
 CACHALOT_CACHE = "default"
@@ -392,7 +406,7 @@ CORS_ALLOWED_ORIGINS = config(
 ).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # WARNING: Only for development. Set to False and configure CORS_ALLOWED_ORIGINS in production for security.
+CORS_ALLOW_ALL_ORIGINS = False  # Disable for security - specific origins are configured in CORS_ALLOWED_ORIGINS
 
 # Cloudinary configuration
 CLOUDINARY_STORAGE = {

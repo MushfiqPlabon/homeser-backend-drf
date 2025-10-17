@@ -154,11 +154,9 @@ class ServiceService(BaseService):
         except ImportError as e:
             logger.error(f"Failed to import advanced data structures: {e}")
             # If import fails, proceed directly to database query
-            pass
         except Exception as e:
             logger.error(f"Unexpected error importing advanced data structures: {e}")
             # If import fails, proceed directly to database query
-            pass
         else:
             # Only use the advanced data structures if import was successful
             try:
@@ -185,7 +183,9 @@ class ServiceService(BaseService):
                                 f"Successfully retrieved service from DB after cache hit: {service.name}"
                             )
                         else:
-                            logger.warning(f"Service not found or inactive: {service_id}")
+                            logger.warning(
+                                f"Service not found or inactive: {service_id}"
+                            )
 
                         return service
                 else:
@@ -194,7 +194,9 @@ class ServiceService(BaseService):
                     )
                     return None
             except Exception as e:
-                logger.error(f"Error using advanced data structures for service {service_id}: {e}")
+                logger.error(
+                    f"Error using advanced data structures for service {service_id}: {e}"
+                )
                 # If there's an error with advanced data structures, proceed to database query
 
         # If advanced data structures are not available or failed, use direct database query

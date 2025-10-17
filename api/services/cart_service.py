@@ -1,5 +1,6 @@
 import json
 import logging
+from decimal import Decimal
 
 import redis
 from django.conf import settings

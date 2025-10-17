@@ -22,9 +22,10 @@ This project demonstrates my ability to bridge technical development with busine
 For technical recruiters: This platform implements advanced software engineering practices including:
 
 - **Architecture**: Service-oriented architecture with clean separation of concerns
-- **Performance**: Advanced data structures (Hash Tables, Tries, Bloom Filters, Segment Trees) for optimal performance
-- **Optimization**: Automatic ORM caching, bulk operations, and N+1 query prevention
-- **Security**: JWT authentication, RBAC, and comprehensive vulnerability protection
+- **Real-time Communication**: WebSocket implementation for live order updates, notifications, and payment status
+- **Performance**: Redis caching with django-cachalot for ORM query optimization, connection pooling, and N+1 query prevention
+- **Optimization**: Automatic ORM caching, bulk operations, and efficient database querying
+- **Security**: JWT authentication, RBAC, comprehensive vulnerability protection, and security headers
 - **Role-Based Access Control (RBAC)**: Implementation of customer, service provider, and admin roles with appropriate permissions and access levels
 - **Code Quality**: Zero redundancy, zero dead code, and industry-standard linting with Ruff
 - **Development Tools**: Modern Python tooling with uv, Ruff linting, and automated testing
@@ -40,6 +41,7 @@ For technical recruiters: This platform implements advanced software engineering
 - Lock-free cart implementation for seamless user experience
 - Advanced search capabilities to improve customer satisfaction
 - Multi-channel communication via email integration
+- Asynchronous email processing with queue system and delivery tracking
 
 ### Revenue Optimization
 - Secure payment processing with SSLCOMMERZ
@@ -99,6 +101,22 @@ This project demonstrates:
 - Focus on customer experience and value creation
 - Revenue-generating features and payment processing
 - Market-ready product development
+
+## Real-time Features
+
+The platform includes comprehensive real-time communication capabilities:
+
+- **WebSocket Integration**: Full-featured WebSocket implementation using Django Channels
+- **Order Updates**: Real-time order status updates through WebSocket connections
+- **Notifications**: Live notification system with WebSocket delivery
+- **Payment Updates**: Real-time payment status notifications
+- **Connection Management**: Robust connection handling with authentication and error recovery
+
+### WebSocket Endpoints
+
+- **Order Updates**: `/ws/orders/` - Provides real-time order status updates for authenticated users
+- **Notifications**: `/ws/notifications/` - Delivers live notifications to users
+- **Payment Updates**: `/ws/payments/` - Real-time payment status notifications
 
 ## API Documentation
 
@@ -168,9 +186,10 @@ For production deployment, ensure:
 1. **Set DEBUG=False** in environment variables
 2. **Use PostgreSQL** instead of SQLite
 3. **Configure proper SSL certificates**
-4. **Set up Redis** with serverless-optimized settings for caching (required for production)
+4. **Set up Redis** with serverless-optimized settings for caching, WebSocket channel layers, and session storage (required for production)
 5. **Configure Cloudinary** for media storage
 6. **Set up email backend** for notifications
+7. **Enable security headers** for production environment
 
 ## Value Proposition
 

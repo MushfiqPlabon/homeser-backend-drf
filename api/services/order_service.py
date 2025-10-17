@@ -9,6 +9,7 @@ from django_fsm import can_proceed  # Add this import
 from orders.models import Order
 from utils.email.email_service import EmailService
 
+from ..utils.websocket_utils import send_order_update
 from .base_service import log_service_method  # Add this import
 from .base_service import BaseService
 
@@ -142,6 +143,20 @@ class OrderService(BaseService):
                     # Log the error but don't fail the operation
                     print(f"Failed to send order status update email: {e}")
 
+                # Send WebSocket notification for order status change
+                try:
+                    send_order_update(
+                        order.user.id,
+                        order.id,
+                        order.status,
+                        f"Order #{order.id} status updated to {order.status}",
+                    )
+                except Exception as e:
+                    # Log the error but don't fail the operation
+                    logger.error(
+                        f"Failed to send WebSocket notification for order {order.id}: {e}"
+                    )
+
             return order
         except Exception as e:
             raise ValueError(f"Cannot transition order to {status}: {e!s}")
@@ -246,6 +261,20 @@ class OrderService(BaseService):
         order.save()  # This save is crucial
         logger.debug(f"After save: order.customer_name = '{order.customer_name}'")
 
+        # Send WebSocket notification for new order
+        try:
+            send_order_update(
+                order.user.id,
+                order.id,
+                order.status,
+                f"New order #{order.id} created successfully",
+            )
+        except Exception as e:
+            # Log the error but don't fail the operation
+            logger.error(
+                f"Failed to send WebSocket notification for new order {order.id}: {e}"
+            )
+
         return order
 
     @classmethod
@@ -310,6 +339,22 @@ class OrderService(BaseService):
                 except Exception as e:
                     # Log the error but don't fail the operation
                     print(f"Failed to send payment confirmation email: {e}")
+
+                # Send WebSocket notification for payment status change
+                try:
+                    from ..utils.websocket_utils import send_payment_update
+
+                    send_payment_update(
+                        order.user.id,
+                        order.id,
+                        payment_status,
+                        f"Payment for order #{order.id} updated to {payment_status}",
+                    )
+                except Exception as e:
+                    # Log the error but don't fail the operation
+                    logger.error(
+                        f"Failed to send WebSocket payment notification for order {order.id}: {e}"
+                    )
 
             return order
         except Exception as e:

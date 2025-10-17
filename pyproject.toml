@@ -52,6 +52,8 @@ dependencies = [
     "temporalio==1.18.0",
     "opentelemetry-instrumentation-django==0.58b0",
     "sentry-sdk==2.41.0",
+    "channels==4.2.0",
+    "channels-redis==4.2.0",
     "certifi==2025.10.5",
     "idna==3.11",
     "annotated-types==0.7.0",
