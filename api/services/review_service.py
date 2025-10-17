@@ -5,9 +5,8 @@ import logging
 
 from services.models import Review
 
-from .base_service import BaseService
-
 from .base_service import log_service_method  # Add this import
+from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +92,8 @@ class ReviewService(BaseService):
                 raise PermissionError("You can only edit your own reviews.")
 
             # Validate review data
-            from utils.validation_utils import validate_rating, validate_text_length
+            from utils.validation_utils import (validate_rating,
+                                                validate_text_length)
 
             # Validate rating if provided
             if "rating" in data and data["rating"] is not None:

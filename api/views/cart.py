@@ -1,17 +1,10 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
-
-from ..serializers import (
-    CartAddSerializer,
-    CartRemoveSerializer,
-    OrderSerializer,
-)
+from ..serializers import (CartAddSerializer, CartRemoveSerializer,
+                           OrderSerializer)
 from ..services.cart_service import CartService
-from ..smart_prefetch import SmartPrefetcher
-from ..unified_base_views import (
-    UnifiedBaseGenericView,
-)
+from ..unified_base_views import UnifiedBaseGenericView
 
 
 class CartView(UnifiedBaseGenericView, generics.RetrieveAPIView):
@@ -24,7 +17,7 @@ class CartView(UnifiedBaseGenericView, generics.RetrieveAPIView):
     def get_object(self):
         # Use CartService to get cart
         from orders.models import Order
-        
+
         cart = self.get_service().get_cart(self.request.user)
 
         # Check if cart has an ID (it should for authenticated users)

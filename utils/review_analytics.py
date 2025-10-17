@@ -4,6 +4,7 @@
 import logging
 from datetime import timedelta
 
+from django.core.cache import cache
 from django.db.models import Avg, Count
 from sklearn.linear_model import LinearRegression
 
@@ -80,7 +81,7 @@ class ReviewAnalyticsService:
 
     @staticmethod
     def get_overall_sentiment_stats(user=None):
-        """Get overall sentiment statistics for all services.
+        """Get overall sentiment statistics for all services with caching.
 
         Args:
             user (User): User requesting the statistics (must be admin)
@@ -92,19 +93,33 @@ class ReviewAnalyticsService:
             PermissionError: If user is not admin
 
         """
+        # Create cache key for overall sentiment stats
+        cache_key = "overall_sentiment_stats"
+
+        # Try to get data from cache first
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            # Check permissions even when using cached data
+            if user is None or not user.is_staff:
+                raise PermissionError("Only admin users can access this endpoint")
+            return cached_data
+
         # Check if user is admin
         if user is None or not user.is_staff:
             raise PermissionError("Only admin users can access this endpoint")
         reviews = Review.objects.all()
 
         if not reviews.exists():
-            return {
+            result = {
                 "total_reviews": 0,
                 "average_sentiment_polarity": 0,
                 "average_sentiment_subjectivity": 0,
                 "top_positive_services": [],
                 "top_negative_services": [],
             }
+            # Cache the result for 15 minutes
+            cache.set(cache_key, result, 900)  # 15 minutes
+            return result
 
         # Calculate averages
         avg_polarity = (
@@ -132,7 +147,7 @@ class ReviewAnalyticsService:
             .order_by("avg_sentiment")[:5]
         )
 
-        return {
+        result = {
             "total_reviews": reviews.count(),
             "average_sentiment_polarity": round(avg_polarity, 3),
             "average_sentiment_subjectivity": round(avg_subjectivity, 3),
@@ -140,9 +155,11 @@ class ReviewAnalyticsService:
                 {
                     "id": service.id,
                     "name": service.name,
-                    "average_sentiment": round(service.avg_sentiment, 3)
-                    if hasattr(service, "avg_sentiment")
-                    else 0,
+                    "average_sentiment": (
+                        round(service.avg_sentiment, 3)
+                        if hasattr(service, "avg_sentiment")
+                        else 0
+                    ),
                 }
                 for service in top_positive
             ],
@@ -150,17 +167,24 @@ class ReviewAnalyticsService:
                 {
                     "id": service.id,
                     "name": service.name,
-                    "average_sentiment": round(service.avg_sentiment, 3)
-                    if hasattr(service, "avg_sentiment")
-                    else 0,
+                    "average_sentiment": (
+                        round(service.avg_sentiment, 3)
+                        if hasattr(service, "avg_sentiment")
+                        else 0
+                    ),
                 }
                 for service in top_negative
             ],
         }
 
+        # Cache the result for 15 minutes
+        cache.set(cache_key, result, 900)  # 15 minutes
+
+        return result
+
     @staticmethod
     def get_sentiment_trend(service_id, days=30):
-        """Get sentiment trend for a service over time.
+        """Get sentiment trend for a service over time with caching.
 
         Args:
             service_id (int): Service ID
@@ -170,6 +194,14 @@ class ReviewAnalyticsService:
             list: Sentiment trend data
 
         """
+        # Create cache key for this specific trend request
+        cache_key = f"sentiment_trend_service_{service_id}_days_{days}"
+
+        # Try to get data from cache first
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+
         from django.utils import timezone
 
         # Calculate date range
@@ -205,11 +237,14 @@ class ReviewAnalyticsService:
                 for item in weekly_data
             ]
 
+        # Cache the result for 15 minutes
+        cache.set(cache_key, trend_data, 900)  # 15 minutes
+
         return trend_data
 
     @staticmethod
     def predict_sentiment_trend(service_id, days_ahead=7):
-        """Predict sentiment trend for a service using linear regression.
+        """Predict sentiment trend for a service using linear regression with caching.
 
         Args:
             service_id (int): Service ID
@@ -219,6 +254,14 @@ class ReviewAnalyticsService:
             dict: Prediction results
 
         """
+        # Create cache key for this specific prediction request
+        cache_key = f"predict_sentiment_trend_service_{service_id}_days_{days_ahead}"
+
+        # Try to get data from cache first
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return cached_data
+
         try:
             # Get historical data (last 90 days)
             from datetime import timedelta
@@ -235,11 +278,14 @@ class ReviewAnalyticsService:
             ).order_by("created_at")
 
             if not reviews.exists() or reviews.count() < 5:
-                return {
+                result = {
                     "prediction": None,
                     "confidence": 0,
                     "message": "Not enough data for prediction",
                 }
+                # Cache the result for 15 minutes even when there's not enough data
+                cache.set(cache_key, result, 900)  # 15 minutes
+                return result
 
             # Prepare data for linear regression
             # Group by day and calculate daily average sentiment
@@ -253,11 +299,14 @@ class ReviewAnalyticsService:
             )
 
             if len(daily_data) < 3:
-                return {
+                result = {
                     "prediction": None,
                     "confidence": 0,
                     "message": "Not enough data points for prediction",
                 }
+                # Cache the result for 15 minutes even when there's not enough data
+                cache.set(cache_key, result, 900)  # 15 minutes
+                return result
 
             # Prepare X (days) and y (sentiment) arrays
             X = []
@@ -284,25 +333,33 @@ class ReviewAnalyticsService:
             # Ensure sentiment is within bounds
             predicted_sentiment = max(-1.0, min(1.0, predicted_sentiment))
 
-            return {
+            result = {
                 "prediction": round(predicted_sentiment, 3),
                 "confidence": round(confidence, 3),
-                "trend": "improving"
-                if predicted_sentiment > y[-1]
-                else "declining"
-                if predicted_sentiment < y[-1]
-                else "stable",
+                "trend": (
+                    "improving"
+                    if predicted_sentiment > y[-1]
+                    else "declining" if predicted_sentiment < y[-1] else "stable"
+                ),
                 "days_ahead": days_ahead,
             }
+
+            # Cache the result for 15 minutes
+            cache.set(cache_key, result, 900)  # 15 minutes
+
+            return result
         except Exception as e:
             logger.error(
                 f"Error predicting sentiment trend for service {service_id}: {e}",
             )
-            return {
+            result = {
                 "prediction": None,
                 "confidence": 0,
                 "message": "Error in prediction",
             }
+            # Cache the error result for 5 minutes to prevent repeated failures
+            cache.set(cache_key, result, 300)  # 5 minutes
+            return result
 
     @staticmethod
     def get_service_insights(service_id):
@@ -365,9 +422,7 @@ class ReviewAnalyticsService:
             volume_trend = (
                 "increasing"
                 if volume_change > 0
-                else "decreasing"
-                if volume_change < 0
-                else "stable"
+                else "decreasing" if volume_change < 0 else "stable"
             )
         else:
             volume_trend = "increasing" if last_week_count > 0 else "no_change"

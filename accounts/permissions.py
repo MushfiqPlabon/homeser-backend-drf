@@ -80,6 +80,10 @@ def assign_review_permissions(user, review):
 
 def is_service_owner(user, service):
     """Check if user is the owner of a service."""
+    # Check direct ownership first
+    if hasattr(service, "owner") and service.owner == user:
+        return True
+    # Fall back to permission check
     return user.has_perm("services.change_service", service)
 
 

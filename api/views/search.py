@@ -4,9 +4,7 @@ from rest_framework.response import Response
 
 from utils.advanced_search_service import AdvancedSearchService
 
-from ..unified_base_views import (
-    UnifiedBaseGenericView,
-)
+from ..unified_base_views import UnifiedBaseGenericView
 
 
 class AdvancedSearchView(UnifiedBaseGenericView):

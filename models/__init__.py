@@ -9,30 +9,17 @@ from decimal import Decimal
 from cloudinary.models import CloudinaryField
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.validators import (
-    EmailValidator,
-    MaxValueValidator,
-    MinValueValidator,
-    RegexValidator,
-)
-
+from django.core.validators import (EmailValidator, MaxValueValidator,
+                                    MinValueValidator, RegexValidator)
 # Import frequently used Django model fields and utilities
 from django.db import models
-
 # Import Django FSM for state machine functionality
 from django_fsm import FSMField, transition
-
 # Import third-party model utilities
 from guardian.shortcuts import assign_perm
 
-from homeser.base_models import (
-    BaseModel,
-    BaseReview,
-    NamedSluggedModel,
-    OrderType,
-    ServiceType,
-    SluggedModel,
-)
+from homeser.base_models import (BaseModel, BaseReview, NamedSluggedModel,
+                                 OrderType, ServiceType, SluggedModel)
 
 # Get user model
 User = get_user_model()

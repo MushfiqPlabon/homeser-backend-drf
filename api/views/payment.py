@@ -3,9 +3,7 @@ from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 
 from ..services.payment_service import PaymentService
-from ..unified_base_views import (
-    UnifiedBaseGenericView,
-)
+from ..unified_base_views import UnifiedBaseGenericView
 
 
 class PaymentIPNView(UnifiedBaseGenericView):

@@ -91,6 +91,8 @@ def process_successful_payment(payment_id):
     from api.services.cart_service import CartService
     from utils.email.email_service import EmailService
 
+    from .utils.websocket_utils import send_order_update, send_payment_update
+
     try:
         # Get the payment object
         from payments.models import Payment
@@ -133,6 +135,28 @@ def process_successful_payment(payment_id):
         except Exception as e:
             logger.error(
                 f"Failed to send payment confirmation email for order {order.id}: {e}",
+            )
+
+        # Send WebSocket notifications
+        try:
+            # Send payment status update notification
+            send_payment_update(
+                order.user.id,
+                payment.id,
+                "completed",
+                f"Payment for order #{order.id} confirmed successfully",
+            )
+
+            # Send order status update notification
+            send_order_update(
+                order.user.id,
+                order.id,
+                order.status,
+                f"Order #{order.id} has been updated to {order.status} status",
+            )
+        except Exception as e:
+            logger.error(
+                f"Failed to send WebSocket notifications for order {order.id}: {e}"
             )
 
     except Exception as e:

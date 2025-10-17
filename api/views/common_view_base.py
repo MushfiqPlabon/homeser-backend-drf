@@ -34,11 +34,10 @@ class BaseViewMixin:
 
         """
         from rest_framework import serializers
-        from rest_framework.exceptions import (
-            AuthenticationFailed,
-            NotAuthenticated,
-            PermissionDenied,
-        )
+        from rest_framework.exceptions import (AuthenticationFailed,
+                                               MethodNotAllowed,
+                                               NotAuthenticated, NotFound,
+                                               ParseError, PermissionDenied)
 
         # Handle authentication and permission exceptions
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
@@ -52,6 +51,20 @@ class BaseViewMixin:
                 error_code="PERMISSION_DENIED",
                 message="You do not have permission to perform this action",
                 status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Handle DRF standard exceptions
+        if isinstance(exception, NotFound):
+            return format_error_response(
+                error_code="NOT_FOUND",
+                message=str(exception),
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        if isinstance(exception, (MethodNotAllowed, ParseError)):
+            return format_error_response(
+                error_code="BAD_REQUEST",
+                message=str(exception),
+                status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         # Handle ValidationError specifically
@@ -77,11 +90,10 @@ class BaseViewSet(viewsets.ModelViewSet, BaseViewMixin):
     def handle_exception(self, exception):
         """Handle exceptions with proper error formatting."""
         from rest_framework import serializers
-        from rest_framework.exceptions import (
-            AuthenticationFailed,
-            NotAuthenticated,
-            PermissionDenied,
-        )
+        from rest_framework.exceptions import (AuthenticationFailed,
+                                               MethodNotAllowed,
+                                               NotAuthenticated, NotFound,
+                                               ParseError, PermissionDenied)
 
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
             return format_error_response(
@@ -95,7 +107,15 @@ class BaseViewSet(viewsets.ModelViewSet, BaseViewMixin):
                 message="You do not have permission to perform this action",
                 status_code=status.HTTP_403_FORBIDDEN,
             )
-        if isinstance(exception, (PermissionError, ValueError)):
+        if isinstance(exception, NotFound):
+            return format_error_response(
+                error_code="NOT_FOUND",
+                message=str(exception),
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+        if isinstance(
+            exception, (MethodNotAllowed, ParseError, PermissionError, ValueError)
+        ):
             return format_error_response(
                 error_code="BAD_REQUEST",
                 message=str(exception),

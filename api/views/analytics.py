@@ -2,10 +2,12 @@ from django.db.models import Avg, Count
 from rest_framework import permissions, status
 from rest_framework.response import Response
 
-from ..unified_base_views import UnifiedBaseGenericView
-from ..serializers import EmailAnalyticsSerializer, SentimentAnalyticsSerializer
-from utils.email.email_service import EmailAnalytics
 from services.models import Review  # Import the Review model
+from utils.email.email_service import EmailAnalytics
+
+from ..serializers import (EmailAnalyticsSerializer,
+                           SentimentAnalyticsSerializer)
+from ..unified_base_views import UnifiedBaseGenericView
 
 
 class EmailAnalyticsView(UnifiedBaseGenericView):

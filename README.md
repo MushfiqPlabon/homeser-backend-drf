@@ -10,6 +10,7 @@ This project demonstrates my ability to bridge technical development with busine
 
 - **Market Segmentation**: Multi-tenant support for individual, business, and government customer types
 - **Customer Relationship Management**: Comprehensive review and rating system with sentiment analysis
+- **Service Provider Management**: Dedicated dashboard and API endpoints for service providers to manage their own services
 - **Revenue Generation**: Secure payment processing with SSLCOMMERZ integration
 - **Customer Experience**: Advanced search functionality with multi-language support
 - **Data-Driven Insights**: Search analytics, email analytics, and sentiment analysis
@@ -21,9 +22,11 @@ This project demonstrates my ability to bridge technical development with busine
 For technical recruiters: This platform implements advanced software engineering practices including:
 
 - **Architecture**: Service-oriented architecture with clean separation of concerns
-- **Performance**: Advanced data structures (Hash Tables, Tries, Bloom Filters, Segment Trees) for optimal performance
-- **Optimization**: Automatic ORM caching, bulk operations, and N+1 query prevention
-- **Security**: JWT authentication, RBAC, and comprehensive vulnerability protection
+- **Real-time Communication**: WebSocket implementation for live order updates, notifications, and payment status
+- **Performance**: Redis caching with django-cachalot for ORM query optimization, connection pooling, and N+1 query prevention
+- **Optimization**: Automatic ORM caching, bulk operations, and efficient database querying
+- **Security**: JWT authentication, RBAC, comprehensive vulnerability protection, and security headers
+- **Role-Based Access Control (RBAC)**: Implementation of customer, service provider, and admin roles with appropriate permissions and access levels
 - **Code Quality**: Zero redundancy, zero dead code, and industry-standard linting with Ruff
 - **Development Tools**: Modern Python tooling with uv, Ruff linting, and automated testing
 
@@ -38,6 +41,7 @@ For technical recruiters: This platform implements advanced software engineering
 - Lock-free cart implementation for seamless user experience
 - Advanced search capabilities to improve customer satisfaction
 - Multi-channel communication via email integration
+- Asynchronous email processing with queue system and delivery tracking
 
 ### Revenue Optimization
 - Secure payment processing with SSLCOMMERZ
@@ -98,6 +102,22 @@ This project demonstrates:
 - Revenue-generating features and payment processing
 - Market-ready product development
 
+## Real-time Features
+
+The platform includes comprehensive real-time communication capabilities:
+
+- **WebSocket Integration**: Full-featured WebSocket implementation using Django Channels
+- **Order Updates**: Real-time order status updates through WebSocket connections
+- **Notifications**: Live notification system with WebSocket delivery
+- **Payment Updates**: Real-time payment status notifications
+- **Connection Management**: Robust connection handling with authentication and error recovery
+
+### WebSocket Endpoints
+
+- **Order Updates**: `/ws/orders/` - Provides real-time order status updates for authenticated users
+- **Notifications**: `/ws/notifications/` - Delivers live notifications to users
+- **Payment Updates**: `/ws/payments/` - Real-time payment status notifications
+
 ## API Documentation
 
 The platform includes comprehensive API documentation:
@@ -105,6 +125,14 @@ The platform includes comprehensive API documentation:
 - **Swagger UI**: Available at `/api/schema/swagger-ui/`
 - **ReDoc**: Available at `/api/schema/redoc/`
 - **OpenAPI Schema**: Available at `/api/schema/`
+
+### Service Provider Endpoints
+
+- **Service Provider Services**: `/api/provider/services/` - Allows service providers to manage only their own services (CRUD operations)
+  - `GET /api/provider/services/` - Retrieve all services owned by the service provider
+  - `POST /api/provider/services/` - Create a new service (owned by the authenticated service provider)
+  - `PUT /api/provider/services/{id}/` - Update an existing service owned by the service provider
+  - `DELETE /api/provider/services/{id}/` - Delete a service owned by the service provider
 
 ### Analytics Endpoints
 
@@ -130,9 +158,9 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 # CORS settings
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
-# Optional services (uncomment to enable)
-# CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
-# REDIS_URL=redis://127.0.0.1:6379/1
+# Services (required for production, including Vercel deployments)
+CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name  # Required for media storage
+REDIS_URL=rediss://username:password@host:port/database    # Required for caching with serverless-optimized settings
 
 # Payment gateway (sandbox by default)
 SSLCOMMERZ_STORE_ID=testbox
@@ -158,9 +186,10 @@ For production deployment, ensure:
 1. **Set DEBUG=False** in environment variables
 2. **Use PostgreSQL** instead of SQLite
 3. **Configure proper SSL certificates**
-4. **Set up Redis** for caching
+4. **Set up Redis** with serverless-optimized settings for caching, WebSocket channel layers, and session storage (required for production)
 5. **Configure Cloudinary** for media storage
 6. **Set up email backend** for notifications
+7. **Enable security headers** for production environment
 
 ## Value Proposition
 

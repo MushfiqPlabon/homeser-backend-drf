@@ -4,11 +4,13 @@
 import hashlib
 import math
 
+from django.core.cache import cache
+
 
 class BloomFilter:
     """Bloom filter implementation for probabilistic set membership testing.
     Used to reduce database hits for non-existent cache keys.
-    Simplified implementation focusing on core functionality.
+    Proper implementation using Redis for storage.
     """
 
     def __init__(
@@ -47,6 +49,13 @@ class BloomFilter:
         hash_obj = hashlib.md5(item_str + str(seed).encode("utf-8"))
         return int(hash_obj.hexdigest(), 16) % self.bit_array_size
 
+    def _get_bit_positions(self, item: str | int) -> list[int]:
+        """Get the positions in the bit array that correspond to the item."""
+        positions = []
+        for i in range(self.num_hashes):
+            positions.append(self._hash(item, i))
+        return positions
+
     def add(self, item: str | int) -> bool:
         """Add an item to the Bloom filter.
 
@@ -57,9 +66,26 @@ class BloomFilter:
             bool: True if successful
 
         """
-        # In a real implementation, we would store this in Redis or another persistent store
-        # For now, we just indicate success
-        return True
+        try:
+            bit_positions = self._get_bit_positions(item)
+
+            # Get the current bit array from cache
+            bit_array_key = f"{self.redis_key}:bits"
+            bit_array = cache.get(bit_array_key, [0] * self.bit_array_size)
+
+            # Set the appropriate bits
+            for pos in bit_positions:
+                bit_array[pos] = 1
+
+            # Store the updated bit array back to cache
+            cache.set(
+                bit_array_key, bit_array, timeout=None
+            )  # No timeout for bloom filter
+
+            return True
+        except Exception:
+            # If there's an error, still return True to avoid false negatives
+            return True
 
     def check(self, item: str | int) -> bool:
         """Check if an item might be in the set (probabilistic).
@@ -71,9 +97,22 @@ class BloomFilter:
             bool: True if item might be in set, False if definitely not
 
         """
-        # For the simplified version, we'll always return True to avoid false negatives
-        # In a real implementation, you'd check the actual bits in the filter
-        return True
+        try:
+            bit_positions = self._get_bit_positions(item)
+
+            # Get the current bit array from cache
+            bit_array_key = f"{self.redis_key}:bits"
+            bit_array = cache.get(bit_array_key, [0] * self.bit_array_size)
+
+            # Check if all the corresponding bits are set
+            for pos in bit_positions:
+                if bit_array[pos] == 0:
+                    return False  # Definitely not in the set
+
+            return True  # Might be in the set
+        except Exception:
+            # If there's an error accessing the bit array, assume the item exists to avoid false negatives
+            return True
 
     def get_stats(self) -> dict:
         """Get statistics about the Bloom filter."""

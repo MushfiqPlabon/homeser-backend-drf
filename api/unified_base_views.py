@@ -6,9 +6,7 @@ Consolidated to eliminate redundancy and improve maintainability.
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, serializers, status, viewsets
 
-from api.views.common_view_base import (
-    BaseViewMixin,
-)
+from api.views.common_view_base import BaseViewMixin
 from utils.response_utils import format_error_response, format_success_response
 
 
@@ -65,11 +63,9 @@ class UnifiedBaseViewSet(
             Response: Formatted error response
 
         """
-        from rest_framework.exceptions import (
-            AuthenticationFailed,
-            NotAuthenticated,
-            PermissionDenied,
-        )
+        from rest_framework.exceptions import (AuthenticationFailed,
+                                               NotAuthenticated,
+                                               PermissionDenied)
 
         if isinstance(exception, (NotAuthenticated, AuthenticationFailed)):
             return format_error_response(

@@ -1,14 +1,14 @@
 # utils/advanced_data_structures/__init__.py
 # Expose advanced data structures for easy import
 
-from .bloom_filter import BloomFilter
-from .hash_table import ServiceHashTable
+from .bloom_filter import BloomFilter, service_bloom_filter
+from .hash_table import OrderHashTable, ServiceHashTable
 from .segment_tree import SegmentTree
 from .trie import Trie
 
 # Create global instances
 service_hash_table = ServiceHashTable()
-service_bloom_filter = BloomFilter()
+order_hash_table = OrderHashTable()
 service_name_trie = Trie()
 
 
@@ -32,9 +32,11 @@ __all__ = [
     "BloomFilter",
     "SegmentTree",
     "ServiceHashTable",
+    "OrderHashTable",
     "Trie",
     "service_bloom_filter",
     "service_hash_table",
+    "order_hash_table",
     "service_name_trie",
     "service_rating_segment_tree",
 ]

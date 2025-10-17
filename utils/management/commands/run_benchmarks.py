@@ -63,7 +63,8 @@ class Command(BaseCommand):
         if not options["api_only"] and not options["cache_only"]:
             self.stdout.write("Running database benchmarks...")
             try:
-                from utils.benchmarking.database_benchmark import DatabaseBenchmark
+                from utils.benchmarking.database_benchmark import \
+                    DatabaseBenchmark
 
                 db_benchmark = DatabaseBenchmark()
                 db_results = db_benchmark.run_comprehensive_benchmark()

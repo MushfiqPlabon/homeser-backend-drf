@@ -57,9 +57,11 @@ class DatabaseBenchmark:
                 "min_query_time": min(times),
                 "max_query_time": max(times),
                 "median_query_time": statistics.median(times),
-                "percentile_95": sorted(times)[int(0.95 * len(times)) - 1]
-                if len(times) > 1
-                else times[0],
+                "percentile_95": (
+                    sorted(times)[int(0.95 * len(times)) - 1]
+                    if len(times) > 1
+                    else times[0]
+                ),
                 "total_time": sum(times),
             }
         return {

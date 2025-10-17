@@ -6,12 +6,10 @@ import logging
 from django.db.models import Avg
 
 from services.models import Service
-from utils.advanced_data_structures import (
-    service_bloom_filter,
-    service_hash_table,
-    service_name_trie,
-    service_rating_segment_tree,
-)
+from utils.advanced_data_structures import (service_bloom_filter,
+                                            service_hash_table,
+                                            service_name_trie,
+                                            service_rating_segment_tree)
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +44,9 @@ def populate_service_hash_table(batch_size=1000):
                     "description": service.description,
                     "price": float(service.price),
                     "image_url": service.image_url,
-                    "avg_rating": float(service.avg_rating_val)
-                    if service.avg_rating_val
-                    else 0.0,
+                    "avg_rating": (
+                        float(service.avg_rating_val) if service.avg_rating_val else 0.0
+                    ),
                     "review_count": service.review_count,
                 }
                 service_hash_table.set(service.id, service_data)
@@ -116,12 +114,14 @@ def populate_service_name_trie():
     try:
         # Get all active services
         services = Service.objects.filter(is_active=True).only("id", "name")
-        
+
         # Insert each service name into the trie
         for service in services:
             service_name_trie.insert(service.name, {"id": service.id})
-            
-        logger.info(f"Successfully populated service name trie with {len(services)} service names")
+
+        logger.info(
+            f"Successfully populated service name trie with {len(services)} service names"
+        )
         return True
     except Exception as e:
         logger.error(f"Error populating service name trie: {e}")
@@ -132,21 +132,29 @@ def populate_service_rating_segment_tree():
     """Populate the service rating segment tree with service ratings."""
     try:
         # Get all active services with their ratings using the annotated field
-        services = Service.objects.filter(is_active=True).annotate(
-            avg_rating_val=Avg("reviews__rating")
-        ).only("id")
-        
+        services = (
+            Service.objects.filter(is_active=True)
+            .annotate(avg_rating_val=Avg("reviews__rating"))
+            .only("id")
+        )
+
         # Create a list of ratings for the segment tree
         ratings_data = []
         for service in services:
             # Use the annotated value or 0 if no reviews
-            rating = float(service.avg_rating_val) if service.avg_rating_val is not None else 0.0
+            rating = (
+                float(service.avg_rating_val)
+                if service.avg_rating_val is not None
+                else 0.0
+            )
             ratings_data.append(rating)
-        
+
         # Update the segment tree with the ratings data
         service_rating_segment_tree.data = ratings_data
-        
-        logger.info(f"Successfully populated service rating segment tree with {len(ratings_data)} service ratings")
+
+        logger.info(
+            f"Successfully populated service rating segment tree with {len(ratings_data)} service ratings"
+        )
         return True
     except Exception as e:
         logger.error(f"Error populating service rating segment tree: {e}")

@@ -71,9 +71,11 @@ class APIBenchmark:
                 "min_response_time": min(times),
                 "max_response_time": max(times),
                 "median_response_time": statistics.median(times),
-                "percentile_95": sorted(times)[int(0.95 * len(times)) - 1]
-                if len(times) > 1
-                else times[0],
+                "percentile_95": (
+                    sorted(times)[int(0.95 * len(times)) - 1]
+                    if len(times) > 1
+                    else times[0]
+                ),
                 "total_time": sum(times),
             }
         return {
@@ -170,9 +172,11 @@ class APIBenchmark:
                 "min_response_time": min(times),
                 "max_response_time": max(times),
                 "median_response_time": statistics.median(times),
-                "percentile_95": sorted(times)[int(0.95 * len(times)) - 1]
-                if len(times) > 1
-                else times[0],
+                "percentile_95": (
+                    sorted(times)[int(0.95 * len(times)) - 1]
+                    if len(times) > 1
+                    else times[0]
+                ),
                 "total_time": total_time,
                 "requests_per_second": total_requests / total_time,
             }

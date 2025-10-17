@@ -1,20 +1,13 @@
 from django.contrib.auth import get_user_model
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 
-from ..serializers import (
-    AdminPromoteSerializer,
-    UserProfileSerializer,
-    UserRegistrationSerializer,
-    UserSerializer,
-)
+from ..serializers import (AdminPromoteSerializer, UserProfileSerializer,
+                           UserRegistrationSerializer, UserSerializer)
 from ..services.user_service import UserService
-from ..unified_base_views import (
-    CRUDTemplateMixin,
-    UnifiedAdminViewSet,
-    UnifiedBaseGenericView,
-)
+from ..unified_base_views import (CRUDTemplateMixin, UnifiedAdminViewSet,
+                                  UnifiedBaseGenericView)
 
 User = get_user_model()
 
@@ -45,7 +38,7 @@ class ProfileView(UnifiedBaseGenericView, generics.RetrieveUpdateAPIView):
             serializer.instance = profile
             return Response(serializer.data)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
 
 class AdminPromoteUserView(UnifiedBaseGenericView, generics.CreateAPIView):
@@ -131,7 +124,7 @@ class AdminUserViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
             serializer.instance = user
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
     def update(self, request, *args, **kwargs):
         """Update a user"""
@@ -150,7 +143,7 @@ class AdminUserViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
             serializer.instance = user
             return Response(serializer.data)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
     def destroy(self, request, *args, **kwargs):
         """Delete a user"""
@@ -166,4 +159,4 @@ class AdminUserViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
                     {"success": False, "message": str(e)},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)

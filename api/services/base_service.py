@@ -4,11 +4,12 @@ Consolidated from previous separate files to eliminate redundancy.
 """
 
 import logging
+from functools import wraps
+
 from django.conf import settings  # Added this import
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from guardian.shortcuts import assign_perm
-from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +226,10 @@ class BaseService:
         permission_codename = f"{action}_{model_name}"
 
         # Check for direct ownership (user is the owner)
-        if hasattr(instance, "user") and instance.user == user:
+        # This handles both the 'user' field (for reviews) and 'owner' field (for services)
+        if hasattr(instance, "owner") and instance.owner == user:
+            return
+        elif hasattr(instance, "user") and instance.user == user:
             return
 
         # Check django-guardian permissions
@@ -241,7 +245,7 @@ class BaseService:
 
     @classmethod
     def _assign_permissions(cls, instance, user):
-        """Assign object-level permissions to the user.
+        """Assign object-level permissions to the user and set ownership.
 
         Args:
             instance: Model instance
@@ -253,6 +257,11 @@ class BaseService:
 
         app_label = cls.get_model()._meta.app_label
         model_name = cls.get_model().__name__.lower()
+
+        # Set ownership if the model has an owner field
+        if hasattr(instance, "owner"):
+            instance.owner = user
+            instance.save(update_fields=["owner"])
 
         # Assign basic permissions
         permissions = ["view", "change", "delete"]

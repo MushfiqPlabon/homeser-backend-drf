@@ -77,18 +77,22 @@ class BenchmarkReport:
                 "total_errors": int(total_errors),
                 "error_rate": total_errors / total_queries if total_queries > 0 else 0,
                 "average_query_time": avg_query_time,
-                "queries_per_second": sum(
-                    r.get(
-                        "operations_per_second",
-                        r.get("iterations", 20) / r["total_time"]
-                        if r.get("total_time", 1) > 0
-                        else 0,
+                "queries_per_second": (
+                    sum(
+                        r.get(
+                            "operations_per_second",
+                            (
+                                r.get("iterations", 20) / r["total_time"]
+                                if r.get("total_time", 1) > 0
+                                else 0
+                            ),
+                        )
+                        for r in db_results
                     )
-                    for r in db_results
-                )
-                / len(db_results)
-                if db_results
-                else 0,
+                    / len(db_results)
+                    if db_results
+                    else 0
+                ),
             }
 
         # Cache Summary
@@ -112,16 +116,16 @@ class BenchmarkReport:
                 "total_operations_tested": len(cache_results),
                 "total_operations": total_operations,
                 "total_errors": int(total_errors),
-                "error_rate": total_errors / total_operations
-                if total_operations > 0
-                else 0,
+                "error_rate": (
+                    total_errors / total_operations if total_operations > 0 else 0
+                ),
                 "average_operation_time": avg_operation_time,
-                "operations_per_second": sum(
-                    r.get("operations_per_second", 0) for r in cache_results
-                )
-                / len(cache_results)
-                if cache_results
-                else 0,
+                "operations_per_second": (
+                    sum(r.get("operations_per_second", 0) for r in cache_results)
+                    / len(cache_results)
+                    if cache_results
+                    else 0
+                ),
             }
 
         return summary

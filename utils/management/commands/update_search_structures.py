@@ -6,11 +6,9 @@ import logging
 from django.core.management.base import BaseCommand
 
 from services.models import Service
-from utils.advanced_data_structures import (
-    service_bloom_filter,
-    service_hash_table,
-    service_name_trie,
-)
+from utils.advanced_data_structures import (service_bloom_filter,
+                                            service_hash_table,
+                                            service_name_trie)
 
 logger = logging.getLogger(__name__)
 
@@ -70,16 +68,13 @@ class Command(BaseCommand):
                         "id": service.id,
                         "description": service.short_desc,
                         "price": float(service.price),
-                        "avg_rating": float(service.avg_rating)
-                        if service.avg_rating
-                        else 0.0,
+                        "avg_rating": (
+                            float(service.avg_rating) if service.avg_rating else 0.0
+                        ),
                     },
                 )
 
                 updated_count += 1
-
-            # Save trie to cache
-            service_name_trie.save_to_cache()
 
             self.stdout.write(
                 self.style.SUCCESS(

@@ -7,15 +7,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from drf_spectacular.utils import extend_schema_view
 from guardian.models import GroupObjectPermission, UserObjectPermission
-from guardian.shortcuts import (
-    assign_perm,
-    get_groups_with_perms,
-    get_objects_for_user,
-    get_perms,
-    get_perms_for_model,
-    get_users_with_perms,
-    remove_perm,
-)
+from guardian.shortcuts import (assign_perm, get_groups_with_perms,
+                                get_objects_for_user, get_perms,
+                                get_perms_for_model, get_users_with_perms,
+                                remove_perm)
 from rest_framework import permissions
 
 from utils.response_utils import format_error_response
@@ -308,10 +303,8 @@ class PermissionService:
 
         """
         # Validate permission data
-        from utils.validation_utils import (
-            validate_positive_integer,
-            validate_text_length,
-        )
+        from utils.validation_utils import (validate_positive_integer,
+                                            validate_text_length)
 
         # Validate user_id
         try:

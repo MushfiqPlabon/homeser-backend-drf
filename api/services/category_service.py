@@ -4,10 +4,8 @@
 from services.models import ServiceCategory
 
 from .abstract_service import AbstractService
-from .base_service import BaseService
-
-
 from .base_service import log_service_method  # Add this import
+from .base_service import BaseService
 
 
 class CategoryService(BaseService, AbstractService):

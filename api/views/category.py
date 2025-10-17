@@ -7,11 +7,8 @@ from services.models import ServiceCategory
 from ..filters import ServiceCategoryFilter
 from ..serializers import ServiceCategorySerializer
 from ..services.category_service import CategoryService
-from ..unified_base_views import (
-    CRUDTemplateMixin,
-    UnifiedAdminViewSet,
-    UnifiedBaseGenericView,
-)
+from ..unified_base_views import (CRUDTemplateMixin, UnifiedAdminViewSet,
+                                  UnifiedBaseGenericView)
 
 
 class CategoryListView(UnifiedBaseGenericView, generics.ListAPIView):
@@ -92,7 +89,7 @@ class CategoryViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
             serializer.instance = category
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
     def _after_create(self, request, response):
         """Hook method called after create."""
@@ -117,7 +114,7 @@ class CategoryViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
             serializer.instance = category
             return Response(serializer.data)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)
 
     def _after_update(self, request, response):
         """Hook method called after update."""
@@ -133,4 +130,4 @@ class CategoryViewSet(UnifiedAdminViewSet, CRUDTemplateMixin):
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return self.handle_service_exception(e)
+            return self.handle_exception(e)

@@ -1,43 +1,31 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .drf_extensions_views import CategoryExtendedViewSet, ServiceExtendedViewSet
-from .views.auth import LoginView, RegisterView, TokenRefreshView
-from .views.cart import (
-    CartView,
-    AddToCartView,
-    RemoveFromCartView,
-    UpdateCartItemQuantityView,
-)
-from .views.category import CategoryViewSet
-from .views.order import (
-    CheckoutView,
-    AdminOrderViewSet,
-    AdminOrderStatusUpdateView,
-    UserOrderViewSet,
-)
-from .views.review import (
-    ServiceReviewsView,
-    AdminReviewViewSet,
-    ReviewDeleteView,
-    UserReviewsView,
-)
-from .views.search import AdvancedSearchView, SearchAnalyticsView, PopularSearchesView
-from .views.service import AdminServiceViewSet, ServiceListView, ServiceDetailView
-from .views.user import AdminUserViewSet, AdminPromoteUserView, ProfileView
-from .views.payment import (
-    PaymentIPNView,
-    PaymentAnalyticsView,
-    PaymentRefundView,
-    PaymentDisputeView,
-)
-from .views.password_reset_views import (
-    PasswordResetRequestView,
-    PasswordResetConfirmView,
-    PasswordResetValidateTokenView,
-)
-from .views.category import CategoryListView, CategoryDetailView
+from .drf_extensions_views import (CategoryExtendedViewSet,
+                                   ServiceExtendedViewSet)
 from .views.analytics import EmailAnalyticsView, SentimentAnalyticsView
+from .views.auth import LoginView, LogoutView, RegisterView, TokenRefreshView
+from .views.cart import (AddToCartView, CartView, RemoveFromCartView,
+                         UpdateCartItemQuantityView)
+from .views.category import (CategoryDetailView, CategoryListView,
+                             CategoryViewSet)
+from .views.config import public_config_view
+from .views.order import (AdminOrderStatusUpdateView, AdminOrderViewSet,
+                          CheckoutView, UserOrderViewSet)
+from .views.password_reset_views import (PasswordResetConfirmView,
+                                         PasswordResetRequestView,
+                                         PasswordResetValidateTokenView)
+from .views.payment import (PaymentAnalyticsView, PaymentDisputeView,
+                            PaymentIPNView, PaymentRefundView)
+from .views.review import (AdminReviewViewSet, ReviewDeleteView,
+                           ServiceReviewsView, UserReviewsView)
+from .views.search import (AdvancedSearchView, PopularSearchesView,
+                           SearchAnalyticsView)
+from .views.service import (AdminServiceViewSet, ServiceDetailView,
+                            ServiceListView)
+from .views.service_provider import ServiceProviderServiceViewSet
+from .views.settings import clear_cache, get_settings, update_settings
+from .views.user import AdminPromoteUserView, AdminUserViewSet, ProfileView
 
 # Default router for existing endpoints
 router = DefaultRouter()
@@ -48,6 +36,9 @@ router.register(r"staff/categories", CategoryViewSet, basename="category")
 router.register(r"admin/orders", AdminOrderViewSet, basename="admin-order")
 router.register(r"admin/reviews", AdminReviewViewSet, basename="admin-review")
 router.register(r"admin/users", AdminUserViewSet, basename="admin-user")
+router.register(
+    r"provider/services", ServiceProviderServiceViewSet, basename="provider-service"
+)
 
 # Additional router for user orders
 user_orders_router = DefaultRouter()
@@ -112,6 +103,7 @@ urlpatterns = [
     # Authentication endpoints
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/logout/", LogoutView.as_view(), name="logout"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     # Password reset endpoints
     path(
@@ -185,5 +177,22 @@ urlpatterns = [
         "analytics/sentiment/",
         SentimentAnalyticsView.as_view(),
         name="sentiment-analytics",
+    ),
+    # Public configuration endpoint
+    path(
+        "config/public/",
+        public_config_view,
+        name="public-config",
+    ),
+    # Settings management endpoints
+    path(
+        "settings/",
+        include(
+            [
+                path("", get_settings, name="get-settings"),
+                path("", update_settings, name="update-settings"),
+                path("cache/clear/", clear_cache, name="clear-cache"),
+            ]
+        ),
     ),
 ]
