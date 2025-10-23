@@ -5,13 +5,8 @@
       "src": "homeser/wsgi.py",
       "use": "@vercel/python",
       "config": {
+        "maxLambdaSize": "15mb",
         "runtime": "python3.12"
-      }
-    },
-    {
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "staticfiles"
       }
     }
   ],
@@ -19,6 +14,10 @@
     {
       "src": "/static/(.*)",
       "dest": "/staticfiles/$1"
+    },
+    {
+      "src": "/media/(.*)",
+      "dest": "/mediafiles/$1"
     },
     {
       "src": "/(.*)",
