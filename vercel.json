@@ -12,21 +12,16 @@
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/staticfiles/$1"
-    },
-    {
-      "src": "/media/(.*)",
-      "dest": "/mediafiles/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "homeser/wsgi.py"
     }
   ],
   "env": {
-    "DJANGO_SETTINGS_MODULE": "homeser.settings",
-    "PYTHONPATH": "$PYTHONPATH:.",
-    "VERCEL": "1"
+    "DJANGO_SETTINGS_MODULE": "homeser.settings"
+  },
+  "functions": {
+    "homeser/wsgi.py": {
+      "excludeFiles": "{.env.example,.env,.venv,venv/,.git/**}"
+    }
   }
 }
