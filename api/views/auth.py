@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework import permissions, status
+from drf_spectacular.utils import extend_schema
+from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import \
@@ -109,6 +110,19 @@ class TokenRefreshView(SimpleJWTTokenRefreshView):
         return response
 
 
+class LogoutSerializer(serializers.Serializer):
+    """Serializer for logout endpoint"""
+
+    refresh = serializers.CharField(
+        required=False, help_text="Refresh token to blacklist"
+    )
+
+
+@extend_schema(
+    request=LogoutSerializer,
+    responses={200: {"type": "object", "properties": {"detail": {"type": "string"}}}},
+    description="Logout user and invalidate tokens",
+)
 class LogoutView(UnifiedBaseGenericView):
     """
     API endpoint for user logout.
@@ -116,6 +130,7 @@ class LogoutView(UnifiedBaseGenericView):
     """
 
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = LogoutSerializer
 
     def post(self, request, *args, **kwargs):
         """
@@ -235,6 +250,8 @@ class LoginView(UnifiedBaseGenericView):
         response_data = {
             "message": "Login successful",
             "user": UserSerializer(user).data,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
         }
 
         response = Response(response_data)

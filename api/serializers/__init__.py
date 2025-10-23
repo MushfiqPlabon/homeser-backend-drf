@@ -191,12 +191,26 @@ class UserSerializer(serializers.ModelSerializer):
     - first_name: User's first name
     - last_name: User's last name
     - is_staff: Whether the user has staff permissions (read-only)
+    - roles: List of roles assigned to the user (read-only)
     """
+
+    roles = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "first_name", "last_name", "is_staff")
-        read_only_fields = ("id", "is_staff")
+        fields = (
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "is_staff",
+            "roles",
+        )
+        read_only_fields = ("id", "is_staff", "roles")
+
+    def get_roles(self, obj):
+        return [group.name for group in obj.groups.all()]
 
 
 class UserProfileSerializer(BaseSerializer):

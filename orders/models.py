@@ -5,7 +5,6 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.db import models
 from django_fsm import FSMField, can_proceed, transition
-from guardian.shortcuts import assign_perm
 from model_utils.managers import QueryManager
 
 from homeser.base_models import BaseModel, OrderType
@@ -366,6 +365,13 @@ class Order(BaseModel):
             ),  # for payment+status queries
             models.Index(fields=["created"]),  # for date-based queries
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "_status"],
+                condition=models.Q(_status="draft"),
+                name="unique_draft_order_per_user",
+            )
+        ]
 
     def save(self, *args, **kwargs):
         """Save the order and assign default permissions."""
@@ -377,14 +383,7 @@ class Order(BaseModel):
         if self.pk:
             self._calculate_totals()
 
-        is_new = self.pk is None
         super().save(*args, **kwargs)
-
-        # Assign default permissions for new orders
-        if is_new and self.user:
-            # Assign owner permissions
-            assign_perm("orders.change_order", self.user, self)
-            assign_perm("orders.view_order", self.user, self)
 
 
 class OrderItem(BaseOrderItem):

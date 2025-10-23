@@ -412,15 +412,6 @@ class Review(BaseReview):
         # Call parent save method for sentiment analysis
         super().save(*args, **kwargs)
 
-        # Assign default permissions for new reviews
-        if self.pk and hasattr(self, "user"):
-            # Assign owner permissions
-            from guardian.shortcuts import assign_perm
-
-            assign_perm("services.change_review", self.user, self)
-            assign_perm("services.delete_review", self.user, self)
-            assign_perm("services.view_review", self.user, self)
-
     @hook(AFTER_CREATE)
     @hook(AFTER_UPDATE)
     @hook(AFTER_DELETE)
@@ -456,6 +447,10 @@ class ABCModelBase(ABCMeta, ModelBase):
     """Metaclass combining ABCMeta and ModelBase to allow abstract base classes
     that also inherit from Django models
     """
+
+    def __new__(cls, name, bases, attrs, **kwargs):
+        # Call both parent metaclass constructors in the right order
+        return super().__new__(cls, name, bases, attrs, **kwargs)
 
 
 class BaseService(NamedSluggedModel, ABC, metaclass=ABCModelBase):

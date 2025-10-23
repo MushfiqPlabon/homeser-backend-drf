@@ -127,6 +127,7 @@ activemq-data/
 
 # Environments
 .env
+.env.vercel
 .envrc
 .venv
 env/
@@ -134,6 +135,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Static files
+staticfiles/
 
 # Spyder project settings
 .spyderproject
