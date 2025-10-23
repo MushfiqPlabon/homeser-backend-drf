@@ -21,7 +21,10 @@
   },
   "functions": {
     "homeser/wsgi.py": {
-      "excludeFiles": "{.env.example,.env,.venv,venv/,.git/**}"
+      "excludeFiles": "**/node_modules/**,**/tests/**,**/__pycache__/**,**/.git/**,.env,.env.example,**/.venv/**,**/venv/**,**/requirements*.txt,uv.lock,*.md,*.toml,**/migrations/**"
     }
+  },
+  "github": {
+    "enabled": false
   }
 }
