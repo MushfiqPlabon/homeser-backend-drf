@@ -1,3 +1,4 @@
+from django.db.models import Avg, Count, Q
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions, status
@@ -13,61 +14,23 @@ from ..unified_base_views import (CRUDTemplateMixin, UnifiedAdminViewSet,
                                   UnifiedBaseGenericView)
 
 
-class ServiceOrderingFilter(filters.OrderingFilter):
-    """Custom ordering filter for services"""
-
-    def filter(self, qs, value):
-        """Apply ordering to queryset"""
-        if not value:
-            return qs
-
-        ordering = []
-        for param in value:
-            if param in ["rating", "avg_rating", "-avg_rating"]:
-                # Use precomputed aggregations for efficient rating-based ordering
-                # Handle both 'avg_rating' and '-avg_rating' by checking for the dash
-                if param.startswith("-"):
-                    ordering.append("-rating_aggregation__average")
-                else:
-                    ordering.append("rating_aggregation__average")
-            elif param == "popular":
-                # Use precomputed aggregations for popular services
-                ordering.extend(
-                    ["-rating_aggregation__count", "-rating_aggregation__average"],
-                )
-            elif param == "price_low":
-                ordering.append("price")
-            elif param == "price_high":
-                ordering.append("-price")
-            elif param == "newest":
-                ordering.append(
-                    "-created_at",
-                )  # Using created_at instead of 'created' if that's the field name
-            else:
-                # Default to name ordering for unrecognized parameters
-                ordering.append("name")
-
-        return qs.order_by(*ordering)
-
-
 class ServiceFilterWithOrdering(ServiceFilter):
-    """Extended service filter with ordering support"""
+    """Service filter with ordering capabilities"""
 
-    ordering = ServiceOrderingFilter(
+    ordering = filters.OrderingFilter(
         fields=(
             ("name", "name"),
             ("price", "price"),
-            ("created_at", "newest"),
-            ("rating_aggregation__average", "rating"),
+            ("created", "created"),
             ("rating_aggregation__average", "avg_rating"),
-            ("rating_aggregation__count", "popular"),
+            ("rating_aggregation__count", "popularity"),
         ),
         field_labels={
             "name": "Name",
             "price": "Price",
-            "created_at": "Newest",
-            "rating_aggregation__average": "Rating",
-            "rating_aggregation__count": "Popularity",
+            "created": "Date Created",
+            "avg_rating": "Rating",
+            "popularity": "Popularity",
         },
     )
 
@@ -76,83 +39,175 @@ class ServiceFilterWithOrdering(ServiceFilter):
 
 
 class ServiceListView(UnifiedBaseGenericView, generics.ListAPIView):
-    """API endpoint that allows clients to view the list of available services.
-
-    Features:
-    - Filter services by category, price range, and availability
-    - Order services by price, rating, or creation date
-    - Search for specific services by name or description
-    - Efficiently loads related data using smart prefetching
-
-    No authentication required - available to all users.
-    """
+    """List services with optimized queries to prevent N+1 problems"""
 
     serializer_class = ServiceSerializer
     permission_classes = [permissions.AllowAny]
-    service_class = ServiceService
     filter_backends = [DjangoFilterBackend]
     filterset_class = ServiceFilterWithOrdering
+    ordering_fields = ["name", "price", "created", "avg_rating"]
+    ordering = ["-created"]
+    service_class = ServiceService
 
     def get_queryset(self):
-        # Use ServiceService to get services
-        queryset = self.get_service().get_services()
+        """Simplified queryset for services"""
+        # Handle schema generation case
+        if getattr(self, "swagger_fake_view", False):
+            return Service.objects.none()
 
-        # Always prefetch rating aggregation to avoid N+1 queries in the serializer
-        queryset = queryset.prefetch_related("rating_aggregation")
+        # Simple queryset that works
+        queryset = Service.objects.select_related("category", "owner").filter(
+            is_active=True
+        )
 
-        # Apply filters from django-filter
-        # Filters are automatically applied by the DjangoFilterBackend
+        # Apply search if provided
+        if search_query := self.request.GET.get("search"):
+            queryset = queryset.filter(
+                Q(name__icontains=search_query)
+                | Q(description__icontains=search_query)
+                | Q(category__name__icontains=search_query)
+            )
 
         return queryset
+
+    def list(self, request, *args, **kwargs) -> Response:
+        """List services with caching and pagination"""
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Apply pagination
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class ServiceDetailView(UnifiedBaseGenericView, generics.RetrieveAPIView):
-    """API endpoint that allows clients to view detailed information about a specific service.
-
-    Features:
-    - Get complete service details including name, description, price, and image
-    - Include aggregated rating and review count
-    - Load associated reviews with the service
-    - Efficiently loads related data using smart prefetching
-
-    No authentication required - available to all users.
-    """
+    """Retrieve single service with optimized queries"""
 
     serializer_class = ServiceSerializer
     permission_classes = [permissions.AllowAny]
-    lookup_field = "id"
     service_class = ServiceService
+    lookup_field = "id"
 
     def get_queryset(self):
-        # Use simple prefetching for related data
-        queryset = Service.objects.select_related("category").prefetch_related(
-            "rating_aggregation", "reviews__user"
+        """Simplified queryset for single service retrieval"""
+        return (
+            Service.objects.select_related("category", "owner")
+            .prefetch_related("rating_aggregation")
+            .filter(is_active=True)
         )
-        return queryset
 
     def get_object(self):
-        """Get a specific service by ID"""
+        """Get a specific service by ID with error handling"""
         service_id = self.kwargs.get("id")
-        service = self.get_service().get_service_detail(service_id)
-        if not service:
+        try:
+            return self.get_queryset().get(id=service_id, is_active=True)
+        except Service.DoesNotExist:
             from rest_framework.exceptions import NotFound
 
             raise NotFound("Service not found or not active")
-        return service
+
+
+class ServiceCreateView(UnifiedBaseGenericView, generics.CreateAPIView):
+    """Create service with proper validation"""
+
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    service_class = ServiceService
+
+    def perform_create(self, serializer) -> None:
+        """Create service with current user as provider"""
+        serializer.save(provider=self.request.user.serviceprofile)
+
+
+class ServiceUpdateView(UnifiedBaseGenericView, generics.UpdateAPIView):
+    """Update service with ownership validation"""
+
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    service_class = ServiceService
+    lookup_field = "id"
+
+    def get_queryset(self):
+        """Only allow users to update their own services"""
+        return Service.objects.filter(owner=self.request.user)
+
+
+class ServiceDeleteView(UnifiedBaseGenericView, generics.DestroyAPIView):
+    """Delete service with ownership validation"""
+
+    permission_classes = [permissions.IsAuthenticated]
+    service_class = ServiceService
+    lookup_field = "id"
+
+    def get_queryset(self):
+        """Only allow users to delete their own services"""
+        return Service.objects.filter(owner=self.request.user)
+
+
+class PopularServicesView(UnifiedBaseGenericView, generics.ListAPIView):
+    """List popular services with optimized aggregations"""
+
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.AllowAny]
+    service_class = ServiceService
+
+    def get_queryset(self):
+        """Get popular services based on ratings and favorites"""
+        return (
+            Service.objects.select_related("category", "owner")
+            .prefetch_related("reviews", "favorites", "rating_aggregation")
+            .annotate(
+                avg_rating=Avg("reviews__rating"),
+                review_count=Count("reviews", distinct=True),
+                favorite_count=Count("favorites", distinct=True),
+            )
+            .filter(
+                is_active=True,
+                avg_rating__gte=4.0,  # Only highly rated services
+            )
+            .order_by("-favorite_count", "-avg_rating", "-review_count")[:20]
+        )
+
+
+class ServiceSearchView(UnifiedBaseGenericView, generics.ListAPIView):
+    """Advanced service search with optimized queries"""
+
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.AllowAny]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ServiceFilter
+    service_class = ServiceService
+
+    def get_queryset(self):
+        """Search services with full-text search capabilities"""
+        queryset = (
+            Service.objects.select_related("category", "owner")
+            .prefetch_related("reviews", "favorites", "rating_aggregation")
+            .annotate(
+                avg_rating=Avg("reviews__rating"),
+                review_count=Count("reviews", distinct=True),
+            )
+            .filter(is_active=True)
+        )
+
+        # Apply search query
+        if search_query := self.request.GET.get("q"):
+            queryset = queryset.filter(
+                Q(name__icontains=search_query)
+                | Q(description__icontains=search_query)
+                | Q(category__name__icontains=search_query)
+                | Q(owner__username__icontains=search_query)
+            )
+
+        return queryset.order_by("-avg_rating", "-review_count")
 
 
 class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateMixin):
-    """API endpoint for staff members to manage services.
-
-    Features:
-    - Create new services with name, description, price, and category
-    - Update existing service details
-    - Delete services (with proper authorization checks)
-    - List all services with advanced filtering options
-    - Retrieve detailed information about specific services
-
-    Authentication required - only staff members can access these endpoints.
-    """
+    """Admin API endpoint for managing services with full CRUD operations"""
 
     serializer_class = ServiceSerializer
     queryset = Service.objects.all()
@@ -162,37 +217,19 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
     filterset_class = ServiceFilterWithOrdering
 
     def get_queryset(self):
-        """Only staff users can access this endpoint"""
-        # Permission checking is handled in the service layer
+        """Admin access to all services with optimized queries"""
         queryset = self.get_service().get_services(
             user=self.request.user,
             admin_mode=True,
         )
-
-        # Always prefetch rating aggregation to avoid N+1 queries in the serializer
-        queryset = queryset.prefetch_related("rating_aggregation")
-
-        # Apply filters from django-filter
-        # Filters are automatically applied by the DjangoFilterBackend
-
-        return queryset
-
-    def get_object(self):
-        """Get a specific service by ID"""
-        # Permission checking is handled in the service layer
-        return super().get_object()
-
-    def _before_create(self, request):
-        """Hook method called before create."""
-        # Add any pre-create logic here
+        return queryset.prefetch_related("rating_aggregation")
 
     def _perform_create(self, request):
-        """Core create logic."""
+        """Create service via service layer"""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
-            # Use ServiceService to create service
             service = self.get_service().create_service(
                 serializer.validated_data,
                 request.user,
@@ -202,23 +239,14 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
         except Exception as e:
             return self.handle_exception(e)
 
-    def _after_create(self, request, response):
-        """Hook method called after create."""
-        # Add any post-create logic here
-
-    def _before_update(self, request):
-        """Hook method called before update."""
-        # Add any pre-update logic here
-
     def _perform_update(self, request, *args, **kwargs):
-        """Core update logic."""
+        """Update service via service layer"""
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
         try:
-            # Use ServiceService to update service
             service = self.get_service().update_service(
                 instance.id,
                 serializer.validated_data,
@@ -229,16 +257,11 @@ class AdminServiceViewSet(NestedViewSetMixin, UnifiedAdminViewSet, CRUDTemplateM
         except Exception as e:
             return self.handle_exception(e)
 
-    def _after_update(self, request, response):
-        """Hook method called after update."""
-        # Add any post-update logic here
-
     def destroy(self, request, *args, **kwargs):
-        """Delete a service"""
+        """Delete service via service layer"""
         instance = self.get_object()
 
         try:
-            # Use ServiceService to delete service
             self.get_service().delete_service(instance.id, request.user)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:

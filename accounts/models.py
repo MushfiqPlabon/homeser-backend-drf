@@ -315,22 +315,5 @@ class UserProfile(BaseModel):
         return f"{self.user.get_full_name()}'s Profile"
 
     def save(self, *args, **kwargs):
-        """Save the profile and assign default permissions to the associated user."""
-        is_new = self.pk is None
+        """Save the profile."""
         super().save(*args, **kwargs)
-
-        # Assign default permissions for new profiles
-        if is_new and self.user:
-            from guardian.shortcuts import assign_perm
-
-            # Assign basic permissions to the user for their own profile
-            permissions = ["view", "change"]
-            app_label = self._meta.app_label
-            model_name = self._meta.model_name.lower()
-
-            for perm in permissions:
-                try:
-                    assign_perm(f"{app_label}.{perm}_{model_name}", self.user, self)
-                except Exception:
-                    # Log error but don't fail
-                    pass

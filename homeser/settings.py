@@ -120,7 +120,6 @@ INSTALLED_APPS = [
     "drf_spectacular",  # Add this for Swagger/OpenAPI documentation
     "guardian",  # Add django-guardian for RBAC
     "django_ratelimit",  # Add django-ratelimit for rate limiting
-    "channels",  # Add channels for WebSocket support
     # Local apps
     "accounts",
     "services",
@@ -169,7 +168,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "homeser.wsgi.app"
-ASGI_APPLICATION = "homeser.asgi.application"
+ASGI_APPLICATION = "homeser.asgi.app"
 
 # Database
 # Always use SQLite for local development unless explicitly overridden
@@ -365,17 +364,12 @@ CACHES = {
     },
 }
 
-# Channel layer configuration for WebSockets
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [config("REDIS_URL", default="redis://127.0.0.1:6379/1")],
-            "capacity": 100,  # Number of messages to hold in the channel layer
-            "expiry": 60,  # Number of seconds to hold messages
-        },
-    },
-}
+# Pusher configuration
+PUSHER_APP_ID = config("PUSHER_APP_ID")
+PUSHER_KEY = config("PUSHER_KEY")
+PUSHER_SECRET = config("PUSHER_SECRET")
+PUSHER_CLUSTER = config("PUSHER_CLUSTER")
+
 
 # Cachalot settings to automatically cache and invalidate ORM queries
 CACHALOT_ENABLED = True
@@ -447,28 +441,30 @@ BACKEND_URL = config("BACKEND_URL", default="http://localhost:8000")
 SPECTACULAR_SETTINGS = {
     "TITLE": "HomeSer API",
     "DESCRIPTION": """
-        # HomeSer API Documentation
+    HomeSer API provides comprehensive endpoints for home service management.
+    This includes user authentication, service listings, bookings, and provider management.
     
-        A comprehensive household service platform API that allows users to:
-        - Browse various household services
-        - Register and login to user accounts
-        - Book services and manage orders
-        - Leave reviews for completed services
-        
-        ## Authentication
-        - Public endpoints (e.g., service browsing) don't require authentication
-        - Private endpoints (e.g., booking, order management) require JWT tokens
-        - Staff endpoints require admin privileges
-        
-        ## Getting Started
-        1. Register a new account or login with existing credentials
-        2. Use the JWT tokens in the authorization header for private endpoints
-        3. Browse services and make bookings as needed
+    A comprehensive household service platform API that allows users to:
+    - Browse various household services
+    - Register and login to user accounts
+    - Book services and manage orders
+    - Leave reviews for completed services
+    
+    ## Authentication
+    - Public endpoints (e.g., service browsing) don't require authentication
+    - Private endpoints (e.g., booking, order management) require JWT tokens
+    - Staff endpoints require admin privileges
+    
+    ## Getting Started
+    1. Register a new account or login with existing credentials
+    2. Use the JWT tokens in the authorization header for private endpoints
+    3. Browse services and make bookings as needed
     """,
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": "/api/",
     "COMPONENT_SPLIT_REQUEST": True,
-    # OTHER SETTINGS
+    "DISABLE_ERRORS_AND_WARNINGS": True,
 }
 
 # Guardian settings

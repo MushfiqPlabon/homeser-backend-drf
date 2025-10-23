@@ -4,7 +4,7 @@
 
 HomeSer is a comprehensive household service platform backend designed to connect service providers and customers, enabling seamless booking, payment processing, and quality management. Developed with a business-first mindset, this platform incorporates advanced marketing and customer relationship strategies alongside robust technical architecture.
 
-This project demonstrates my ability to bridge technical development with business strategy, applying marketing principles to technology solutions. As a BBA Marketing graduate, I've integrated customer experience, value proposition, and market positioning considerations into the technical implementation.
+This project demonstrates my ability to bridge technical development with business strategy, applying marketing principles to technology solutions. As a BBA Marketing graduate, I've integrated customer experience, value proposition, and market positioning considerations into the technical implementation planning, the project is still under development.
 
 ## Key Business Features
 
@@ -22,7 +22,7 @@ This project demonstrates my ability to bridge technical development with busine
 For technical recruiters: This platform implements advanced software engineering practices including:
 
 - **Architecture**: Service-oriented architecture with clean separation of concerns
-- **Real-time Communication**: WebSocket implementation for live order updates, notifications, and payment status
+- **Real-time Communication**: Pusher-based real-time communication for live order updates, notifications, and payment status
 - **Performance**: Redis caching with django-cachalot for ORM query optimization, connection pooling, and N+1 query prevention
 - **Optimization**: Automatic ORM caching, bulk operations, and efficient database querying
 - **Security**: JWT authentication, RBAC, comprehensive vulnerability protection, and security headers
@@ -104,19 +104,26 @@ This project demonstrates:
 
 ## Real-time Features
 
-The platform includes comprehensive real-time communication capabilities:
+The platform includes comprehensive real-time communication capabilities through Pusher integration:
 
-- **WebSocket Integration**: Full-featured WebSocket implementation using Django Channels
-- **Order Updates**: Real-time order status updates through WebSocket connections
-- **Notifications**: Live notification system with WebSocket delivery
+- **Real-time Notifications**: Pusher-based real-time notifications for order updates, payment status changes, and general announcements
+- **Order Updates**: Real-time order status updates delivered to authenticated users
 - **Payment Updates**: Real-time payment status notifications
-- **Connection Management**: Robust connection handling with authentication and error recovery
+- **Connection Management**: Robust connection handling with authentication and automatic reconnection
 
-### WebSocket Endpoints
+### Pusher Configuration
 
-- **Order Updates**: `/ws/orders/` - Provides real-time order status updates for authenticated users
-- **Notifications**: `/ws/notifications/` - Delivers live notifications to users
-- **Payment Updates**: `/ws/payments/` - Real-time payment status notifications
+The platform uses Pusher for real-time communication:
+- Pusher credentials are configured through environment variables (`PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, `PUSHER_CLUSTER`)
+- Real-time events are triggered through the `api/utils/websocket_utils.py` module
+- Events include `order_update`, `payment_update`, and `notification` for different types of real-time communications
+
+### Real-time Endpoints
+
+Instead of WebSocket endpoints, the platform provides real-time functionality through:
+- **Order Updates**: Pusher channel `user_{user_id}` with event `order_update`
+- **Payment Updates**: Pusher channel `user_{user_id}` with event `payment_update`
+- **General Notifications**: Pusher channel `user_{user_id}` with event `notification`
 
 ## API Documentation
 
@@ -179,6 +186,27 @@ Run the test suite:
 uv run manage.py test
 ```
 
+## Database Management Utilities
+
+The project includes several custom management commands for database operations:
+
+### erase_db
+Completely erases and recreates the database:
+```bash
+uv run manage.py erase_db
+```
+This command works with both SQLite (for development) and PostgreSQL (for production). For PostgreSQL databases, it connects to the 'postgres' database to properly drop and recreate the target database. If connecting to the 'postgres' database fails, it falls back to dropping all tables individually while preserving the database structure. The command also clears the media directory to remove any uploaded files.
+
+### Other Database Management Commands
+- `populate_advanced_structures`: Populate advanced data structures for performance optimization
+- `init_search_analytics`: Initialize search analytics with sample data
+- `update_search_structures`: Update search data structures when services change
+- `analyze_reviews`: Perform sentiment analysis on existing reviews
+- `warm_caches`: Warm caches with popular data
+- `demo_order_fsm`: Demonstrate order finite state machine functionality
+- `run_benchmarks`: Run performance benchmarks
+- `test_email`: Test email functionality
+
 ## Deployment
 
 For production deployment, ensure:
@@ -186,7 +214,7 @@ For production deployment, ensure:
 1. **Set DEBUG=False** in environment variables
 2. **Use PostgreSQL** instead of SQLite
 3. **Configure proper SSL certificates**
-4. **Set up Redis** with serverless-optimized settings for caching, WebSocket channel layers, and session storage (required for production)
+4. **Set up Redis** with serverless-optimized settings for caching and session storage (required for production)
 5. **Configure Cloudinary** for media storage
 6. **Set up email backend** for notifications
 7. **Enable security headers** for production environment
