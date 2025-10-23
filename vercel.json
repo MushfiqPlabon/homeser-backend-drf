@@ -1,8 +1,8 @@
 {
-  "buildCommand": "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate",
+  "buildCommand": "uv sync && uv run manage.py collectstatic --noinput && uv manage.py migrate",
   "builds": [
     {
-      "src": "homeser/wsgi.py",
+      "src": "homeser/asgi.py",
       "use": "@vercel/python",
       "config": { "python": "3.11.x" }
     }
@@ -14,7 +14,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "homeser/wsgi.py"
+      "dest": "homeser/asgi.py"
     }
   ]
 }
