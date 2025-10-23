@@ -2,21 +2,26 @@
   "version": 2,
   "builds": [
     {
-      "src": "HomeSer/wsgi.py",
+      "src": "homeser/wsgi.py",
       "use": "@vercel/python",
       "config": {
+        "maxLambdaSize": "15mb",
         "runtime": "python3.12"
       }
     }
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "homeser/wsgi.py"
     }
-  ]
+  ],
+  "env": {
+    "DJANGO_SETTINGS_MODULE": "homeser.settings"
+  },
+  "functions": {
+    "homeser/wsgi.py": {
+      "excludeFiles": "{.env.example,.env,.venv,venv/,.git/**}"
+    }
+  }
 }
