@@ -1,11 +1,4 @@
 {
-  "builds": [
-    {
-      "src": "homeser/asgi.py",
-      "use": "@vercel/python",
-      "config": { "python": "3.11.x" }
-    }
-  ],
   "routes": [
     {
       "src": "/static/(.*)",
@@ -13,7 +6,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "homeser/asgi.py"
+      "dest": "homeser/wsgi.py"
     }
   ]
 }
