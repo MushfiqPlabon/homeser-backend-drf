@@ -1,5 +1,4 @@
 {
-  "buildCommand": "uv sync && uv run manage.py collectstatic --noinput && uv manage.py migrate",
   "builds": [
     {
       "src": "homeser/asgi.py",
