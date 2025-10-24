@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Initialize Redis connection
 redis_client = None
 try:
-    redis_url = getattr(settings, "REDIS_URL", "redis://127.0.0.1:6379/1")
+    redis_url = getattr(settings, "REDIS_URL")
     redis_client = redis.from_url(
         redis_url,
         socket_connect_timeout=1,

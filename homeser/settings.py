@@ -348,7 +348,7 @@ CACHE_TTL = config("CACHE_TTL", default=900, cast=int)
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+        "LOCATION": config("REDIS_URL"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "CONNECTION_POOL_KWARGS": {
@@ -391,7 +391,7 @@ CACHALOT_ONLY_CACHABLE_TABLES = [
 
 # Redis configuration for direct connection
 if not VERCEL_URL:
-    REDIS_URL = config("REDIS_URL", default="redis://127.0.0.1:6379/1")
+    REDIS_URL = config("REDIS_URL")
 
 # CORS settings
 CORS_ALLOWED_ORIGINS = config(
@@ -528,7 +528,7 @@ LOGGING = {
 # DRAMATIQ_BROKER = {
 #     "BROKER": "dramatiq.brokers.redis.RedisBroker",
 #     "OPTIONS": {
-#         "url": config.get("REDIS_URL", "redis://127.0.0.1:6379/2"),
+#         "url": config.get("REDIS_URL"),
 #     },
 #     "MIDDLEWARE": [
 #         "dramatiq.middleware.AgeLimit",
@@ -576,6 +576,4 @@ if config("SENTRY_DSN", default=None):
 #     "api_key": config.get("MEILISEARCH_MASTER_KEY", "masterKey"),
 # }
 
-# RedisBloom Configuration
-if not VERCEL_URL:
-    REDISBLOOM_HOST = config("REDISBLOOM_HOST", default="redis://127.0.0.1:6379")
+

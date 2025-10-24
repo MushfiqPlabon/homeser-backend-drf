@@ -18,7 +18,7 @@ class CacheBenchmark:
 
     def __init__(self):
         self.redis_client = redis.Redis.from_url(
-            getattr(settings, "REDIS_URL", "redis://127.0.0.1:6379/1"),
+            getattr(settings, "REDIS_URL"),
         )
 
     def benchmark_cache_operation(self, name, operation_func, iterations=100):
