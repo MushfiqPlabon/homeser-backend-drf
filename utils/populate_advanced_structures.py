@@ -195,5 +195,3 @@ def run_population():
         print("Successfully populated all advanced data structures")
     else:
         print("Some errors occurred while populating advanced data structures")
-
-        print("Some errors occurred while populating advanced data structures")

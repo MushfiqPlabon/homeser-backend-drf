@@ -7,7 +7,7 @@ from django.db import models
 from django_fsm import FSMField, can_proceed, transition
 from model_utils.managers import QueryManager
 
-from homeser.base_models import BaseModel
+from homeser.base_models import BaseModel, OrderType
 from services.models import Service
 from utils.validation_package import validate_min_value
 
@@ -406,6 +406,12 @@ class StandardOrder(Order):
     class Meta:
         proxy = True  # Using proxy model for polymorphism
 
+    def calculate_delivery_time(self):
+        """Calculate standard delivery time (5-7 business days)"""
+        from datetime import datetime, timedelta
+
+        return datetime.now() + timedelta(days=7)
+
 
 class ExpressOrder(Order):
     """Express order with faster delivery"""
@@ -423,6 +429,16 @@ class ExpressOrder(Order):
         verbose_name = "Express Order"
         verbose_name_plural = "Express Orders"
 
+    def calculate_delivery_time(self):
+        """Calculate express delivery time (1-2 business days)"""
+        from datetime import datetime, timedelta
+
+        return datetime.now() + timedelta(days=2)
+
+    def get_total(self):
+        """Get total including express fee"""
+        return self.total + self.express_fee
+
 
 class ScheduledOrder(Order):
     """Scheduled order for future delivery"""
@@ -436,3 +452,29 @@ class ScheduledOrder(Order):
     class Meta:
         verbose_name = "Scheduled Order"
         verbose_name_plural = "Scheduled Orders"
+
+    def calculate_delivery_time(self):
+        """Scheduled delivery time"""
+        return self.scheduled_date
+
+    def send_reminder(self):
+        """Send reminder for scheduled order"""
+        if not self.reminder_sent:
+            # Implementation for sending reminder
+            self.reminder_sent = True
+            self.save()
+
+
+class OrderFactory:
+    """Factory for creating different types of orders"""
+
+    @staticmethod
+    def create_order(order_type, **kwargs):
+        """Create an order of the specified type"""
+        if order_type == OrderType.STANDARD:
+            return StandardOrder(**kwargs)
+        if order_type == OrderType.EXPRESS:
+            return ExpressOrder(**kwargs)
+        if order_type == OrderType.SCHEDULED:
+            return ScheduledOrder(**kwargs)
+        raise ValueError(f"Unknown order type: {order_type}")

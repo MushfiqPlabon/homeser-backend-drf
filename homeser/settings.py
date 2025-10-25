@@ -132,7 +132,6 @@ INSTALLED_APPS = [
     "cachalot",
     "rest_framework_extensions",
     # Additional apps for performance optimization
-    # "dramatiq",  # Not used in Vercel deployment - background tasks are synchronous
 ]
 
 MIDDLEWARE = [
@@ -209,12 +208,6 @@ elif config("DATABASE_URL", default=None):
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {
-            "min_length": 8,
-        },
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -524,30 +517,9 @@ LOGGING = {
     },
 }
 
-# Dramatiq Configuration - Not used in Vercel deployment, background tasks are synchronous
-# DRAMATIQ_BROKER = {
-#     "BROKER": "dramatiq.brokers.redis.RedisBroker",
-#     "OPTIONS": {
-#         "url": config.get("REDIS_URL"),
-#     },
-#     "MIDDLEWARE": [
-#         "dramatiq.middleware.AgeLimit",
-#         "dramatiq.middleware.TimeLimit",
-#         "dramatiq.middleware.Callbacks",
-#         "dramatiq.middleware.Retries",
-#         "django_dramatiq.middleware.DbConnectionsMiddleware",
-#     ]
-# }
+
 #
-# DRAMATIQ_WORKER = {
-#     "MIDDLEWARE": [
-#         "dramatiq.middleware.AgeLimit",
-#         "dramatiq.middleware.TimeLimit",
-#         "dramatiq.middleware.Callbacks",
-#         "dramatiq.middleware.Retries",
-#         "django_dramatiq.middleware.DbConnectionsMiddleware",
-#     ]
-# }
+
 
 # Opentelemetry Configuration
 if config("ENABLE_OPENTELEMETRY", default=False, cast=bool):
@@ -569,11 +541,3 @@ if config("SENTRY_DSN", default=None):
         # django.contrib.auth) you may enable sending PII data.
         send_default_pii=True,
     )
-
-# MeiliSearch Configuration - Not used in Vercel deployment, using PostgreSQL full-text search instead
-# MEILISEARCH_CONFIG = {
-#     "host": config.get("MEILISEARCH_HOST", "http://127.0.0.1:7700"),
-#     "api_key": config.get("MEILISEARCH_MASTER_KEY", "masterKey"),
-# }
-
-

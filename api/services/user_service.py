@@ -316,8 +316,7 @@ class UserService(BaseService):
         profile = cls.get_user_profile(user)
 
         # Validate profile data
-        from utils.validation_utils import (validate_phone_number,
-                                            validate_text_length)
+        from utils.validation_utils import validate_phone, validate_text_length
 
         # Validate bio if provided
         if data.get("bio"):
@@ -335,7 +334,7 @@ class UserService(BaseService):
         # Validate phone if provided
         if data.get("phone"):
             try:
-                phone = validate_phone_number(data["phone"])
+                phone = validate_phone(data["phone"])
                 data["phone"] = phone
             except Exception as e:
                 raise ValueError(f"Invalid phone: {e!s}")
