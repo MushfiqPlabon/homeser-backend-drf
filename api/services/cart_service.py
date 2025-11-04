@@ -255,6 +255,10 @@ class CartService(BaseService):
                         quantity=item_data["quantity"],
                         unit_price=Decimal(item_data["price"]),
                     )
+
+                # Calculate and save totals
+                order._calculate_totals()
+                order.save()
         except Exception as e:
             logger.error(f"Database save error for user {user_id}: {e}")
             raise
@@ -264,22 +268,26 @@ class CartService(BaseService):
         cls, user_id: int, cart_map: Dict[int, Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Convert hash map back to response format"""
+        from decimal import Decimal
+
         total_items = sum(item["quantity"] for item in cart_map.values())
         total_price = sum(
-            item["quantity"] * float(item["price"]) for item in cart_map.values()
+            Decimal(str(item["quantity"])) * Decimal(item["price"])
+            for item in cart_map.values()
         )
 
         # Calculate tax at 15% (consistent with Order model)
-        tax = total_price * 0.15
+        tax_rate = Decimal("0.15")
+        tax = total_price * tax_rate
         total = total_price + tax
 
         return {
             "user_id": user_id,
             "items": list(cart_map.values()),
             "total_items": total_items,
-            "total_price": total_price,
-            "tax": tax,
-            "total": total,
+            "total_price": float(total_price),
+            "tax": float(tax),
+            "total": float(total),
         }
 
     @classmethod

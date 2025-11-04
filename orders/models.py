@@ -244,7 +244,7 @@ class Order(BaseModel):
 
         # Calculate subtotal using database aggregation to avoid N+1 queries
         item_totals = self.items.aggregate(
-            subtotal=Sum(F("quantity") * F("price"), output_field=DecimalField()),
+            subtotal=Sum(F("quantity") * F("unit_price"), output_field=DecimalField()),
         )
         subtotal = item_totals["subtotal"] or Decimal("0.00")
 

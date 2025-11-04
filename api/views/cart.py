@@ -39,11 +39,16 @@ class CartView(UnifiedBaseGenericView, generics.RetrieveAPIView):
         )
 
         # Prefetch related items and services for performance
-        return (
+        order = (
             Order.objects.select_related("user")
             .prefetch_related("items__service__category")
             .get(id=order.id)
         )
+        
+        # Calculate totals based on cart items
+        order._calculate_totals()
+        
+        return order
 
 
 class AddToCartView(UnifiedBaseGenericView):
