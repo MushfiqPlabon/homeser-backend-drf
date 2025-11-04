@@ -292,9 +292,7 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
     # Security enhancements
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": config(
-        "SIGNING_KEY", default="your-very-secure-signing-key-change-in-production"
-    ),
+    "SIGNING_KEY": config("SIGNING_KEY", default=None),
     "VERIFYING_KEY": "",
     "AUDIENCE": None,
     "ISSUER": None,

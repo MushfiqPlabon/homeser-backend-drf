@@ -306,6 +306,7 @@ class UserProfile(BaseModel):
     bio = models.TextField(max_length=500, blank=True)
     profile_pic = CloudinaryField("image", blank=True, null=True)
     social_links = models.JSONField(default=dict, blank=True)
+    preferences = models.JSONField(default=dict, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
 

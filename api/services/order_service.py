@@ -175,7 +175,7 @@ class OrderService(BaseService):
 
         """
         # Validate customer data
-        from utils.validation_utils import validate_text_length
+        from utils.validation import validate_text_length
 
         # Validate name
         try:

@@ -2,104 +2,21 @@
 This package brings together all validation logic in one place for better organization and reuse.
 """
 
-# Import all validation utilities
-from utils.validation_utils import (validate_email_format, validate_name,
-                                    validate_phone, validate_positive_price,
-                                    validate_rating, validate_text_length)
-
-# Import all service-specific validators (if they exist)
-try:
-    from services.validators import (validate_image_aspect_ratio,
-                                     validate_image_dimensions,
-                                     validate_image_file_extension,
-                                     validate_image_file_size)
-except ImportError:
-    # Define placeholder functions if the import fails
-    import os
-
-    from django.core.exceptions import ValidationError
-
-    def validate_image_file_extension(value):
-        """Validate image file extension
-        Args:
-            value: File object to validate
-        Raises:
-            ValidationError: If file extension is not allowed
-        """
-        allowed_extensions = [".jpg", ".jpeg", ".png", ".gif", ".webp"]
-        ext = os.path.splitext(value.name)[1].lower()
-        if ext not in allowed_extensions:
-            raise ValidationError(
-                f"File extension {ext} is not allowed. Allowed extensions are: {', '.join(allowed_extensions)}",
-            )
-
-    def validate_image_file_size(value):
-        """Validate image file size
-        Args:
-            value: File object to validate
-        Raises:
-            ValidationError: If file size exceeds limit
-        """
-        max_size = 5 * 1024 * 1024  # 5MB in bytes
-        if value.size > max_size:
-            raise ValidationError(
-                "File size is too large. Maximum allowed size is 5MB.",
-            )
-
-    def validate_image_dimensions(value):
-        """Validate image dimensions
-        Args:
-            value: File object to validate
-        Raises:
-            ValidationError: If image dimensions are not within allowed range
-        """
-        from PIL import Image
-
-        try:
-            img = Image.open(value)
-        except Exception:
-            raise ValidationError("File is not a valid image or is corrupted.")
-
-        max_width, max_height = 4000, 4000  # Maximum dimensions
-        min_width, min_height = 10, 10  # Minimum dimensions
-        if img.width < min_width or img.height < min_height:
-            raise ValidationError(
-                f"Image dimensions are too small. Minimum allowed dimensions are {min_width}x{min_height}.",
-            )
-        if img.width > max_width or img.height > max_height:
-            raise ValidationError(
-                f"Image dimensions are too large. Maximum allowed dimensions are {max_width}x{max_height}.",
-            )
-
-    def validate_image_aspect_ratio(value):
-        """Validate image aspect ratio
-        Args:
-            value: File object to validate
-        Raises:
-            ValidationError: If aspect ratio is not within allowed range
-        """
-        from PIL import Image
-
-        try:
-            img = Image.open(value)
-        except Exception:
-            raise ValidationError("File is not a valid image or is corrupted.")
-
-        # Check if aspect ratio is between 1:3 and 3:1 (landscape or portrait, but not extremely narrow)
-        aspect_ratio = img.width / img.height
-        if aspect_ratio < 1 / 3 or aspect_ratio > 3:
-            raise ValidationError(
-                f"Image aspect ratio {aspect_ratio:.2f} is not allowed. Allowed aspect ratios are between 1:3 and 3:1.",
-            )
-
-
 # Import Django built-in validators for convenience
-# Import Django ValidationError for consistent error handling
 from django.core.exceptions import ValidationError
 from django.core.validators import (EmailValidator, MaxLengthValidator,
                                     MaxValueValidator, MinLengthValidator,
                                     MinValueValidator, RegexValidator,
                                     URLValidator)
+
+# Import all validation utilities from the centralized module
+from utils.validation import (validate_email_format,
+                              validate_image_aspect_ratio,
+                              validate_image_dimensions,
+                              validate_image_file_extension,
+                              validate_image_file_size, validate_name,
+                              validate_phone, validate_positive_price,
+                              validate_rating, validate_text_length)
 
 # Re-export commonly used validators with more descriptive names
 validate_min_value = MinValueValidator

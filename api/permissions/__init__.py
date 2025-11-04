@@ -303,8 +303,8 @@ class PermissionService:
 
         """
         # Validate permission data
-        from utils.validation_utils import (validate_positive_integer,
-                                            validate_text_length)
+        from utils.validation import (validate_positive_integer,
+                                      validate_text_length)
 
         # Validate user_id
         try:

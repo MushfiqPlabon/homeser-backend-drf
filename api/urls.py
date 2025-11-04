@@ -10,22 +10,35 @@ from .views.cart import (AddToCartView, CartView, RemoveFromCartView,
 from .views.category import (CategoryDetailView, CategoryListView,
                              CategoryViewSet)
 from .views.config import public_config_view
+from .views.contracts import get_all_contracts
+from .views.email_verification import (EmailVerificationView,
+                                       ResendVerificationEmailView)
+from .views.error_analytics import (ErrorAnalyticsView, clear_error_analytics,
+                                    error_summary, health_check,
+                                    report_client_error)
+from .views.favorites import AddFavoriteView, FavoritesView, RemoveFavoriteView
 from .views.order import (AdminOrderStatusUpdateView, AdminOrderViewSet,
                           CheckoutView, UserOrderViewSet)
+from .views.order_actions import CancelOrderView, RequestRefundView
 from .views.password_reset_views import (PasswordResetConfirmView,
                                          PasswordResetRequestView,
                                          PasswordResetValidateTokenView)
 from .views.payment import (PaymentAnalyticsView, PaymentDisputeView,
                             PaymentIPNView, PaymentRefundView)
+from .views.provider_analytics import (CustomerAnalyticsView,
+                                       ProviderAnalyticsView)
 from .views.review import (AdminReviewViewSet, ReviewDeleteView,
                            ServiceReviewsView, UserReviewsView)
 from .views.search import (AdvancedSearchView, PopularSearchesView,
                            SearchAnalyticsView)
 from .views.service import (AdminServiceViewSet, ServiceDetailView,
                             ServiceListView)
+from .views.service_actions import ToggleServiceAvailabilityView
 from .views.service_provider import ServiceProviderServiceViewSet
 from .views.settings import clear_cache, get_settings, update_settings
 from .views.user import AdminPromoteUserView, AdminUserViewSet, ProfileView
+from .views.user_preferences import UserPreferencesView
+from .views.user_stats import ChangePasswordView, UserStatsView
 
 # Default router for existing endpoints
 router = DefaultRouter()
@@ -194,5 +207,97 @@ urlpatterns = [
                 path("cache/clear/", clear_cache, name="clear-cache"),
             ]
         ),
+    ),
+    # Favorites endpoints
+    path("favorites/", FavoritesView.as_view(), name="favorites"),
+    path("favorites/add/", AddFavoriteView.as_view(), name="add-favorite"),
+    path(
+        "favorites/remove/<int:service_id>/",
+        RemoveFavoriteView.as_view(),
+        name="remove-favorite",
+    ),
+    # User preferences endpoint
+    path(
+        "user/preferences/",
+        UserPreferencesView.as_view(),
+        name="user-preferences",
+    ),
+    # User stats endpoints
+    path("user/stats/", UserStatsView.as_view(), name="user-stats"),
+    path(
+        "user/change-password/",
+        ChangePasswordView.as_view(),
+        name="change-password",
+    ),
+    # Provider and customer analytics endpoints
+    path(
+        "analytics/provider/",
+        ProviderAnalyticsView.as_view(),
+        name="provider-analytics",
+    ),
+    path(
+        "analytics/customer/",
+        CustomerAnalyticsView.as_view(),
+        name="customer-analytics",
+    ),
+    # Error analytics endpoints
+    path(
+        "analytics/errors/",
+        ErrorAnalyticsView.as_view(),
+        name="error-analytics",
+    ),
+    path(
+        "analytics/errors/clear/",
+        clear_error_analytics,
+        name="clear-error-analytics",
+    ),
+    path(
+        "analytics/errors/summary/",
+        error_summary,
+        name="error-summary",
+    ),
+    path(
+        "analytics/health/",
+        health_check,
+        name="health-check",
+    ),
+    path(
+        "analytics/errors/report/",
+        report_client_error,
+        name="report-client-error",
+    ),
+    # Order action endpoints
+    path(
+        "orders/<int:order_id>/cancel/",
+        CancelOrderView.as_view(),
+        name="cancel-order",
+    ),
+    path(
+        "orders/<int:order_id>/refund/",
+        RequestRefundView.as_view(),
+        name="request-refund",
+    ),
+    # Service action endpoints
+    path(
+        "services/<int:service_id>/toggle-availability/",
+        ToggleServiceAvailabilityView.as_view(),
+        name="toggle-service-availability",
+    ),
+    # Email verification endpoints
+    path(
+        "auth/email/verify/<str:uidb64>/<str:token>/",
+        EmailVerificationView.as_view(),
+        name="email-verification",
+    ),
+    path(
+        "auth/email/resend/",
+        ResendVerificationEmailView.as_view(),
+        name="resend-verification",
+    ),
+    # Contracts endpoint
+    path(
+        "contracts/all/",
+        get_all_contracts,
+        name="all-contracts",
     ),
 ]

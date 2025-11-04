@@ -70,7 +70,7 @@ class CategoryService(BaseService, AbstractService):
         cls._require_staff_permission(user)
 
         # Validate category data
-        from utils.validation_utils import validate_text_length
+        from utils.validation import validate_text_length
 
         # Validate name
         try:
@@ -141,7 +141,7 @@ class CategoryService(BaseService, AbstractService):
         cls._require_staff_permission(user)
 
         # Validate category data
-        from utils.validation_utils import validate_text_length
+        from utils.validation import validate_text_length
 
         # Validate name if provided
         if data.get("name"):

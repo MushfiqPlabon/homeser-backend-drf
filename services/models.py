@@ -1,4 +1,4 @@
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from decimal import Decimal
 from typing import Optional
 
@@ -10,12 +10,11 @@ from django_lifecycle import (AFTER_CREATE, AFTER_DELETE, AFTER_UPDATE,
                               LifecycleModel, hook)
 from model_utils.managers import QueryManager
 
-from homeser.base_models import BaseReview, NamedSluggedModel
-from utils.validation_package import (validate_image_aspect_ratio,
-                                      validate_image_file_extension,
-                                      validate_image_file_size,
-                                      validate_positive_price,
-                                      validate_text_length)
+from homeser.base_models import BaseModel, BaseReview, NamedSluggedModel
+from utils.validation import (validate_image_aspect_ratio,
+                              validate_image_file_extension,
+                              validate_image_file_size,
+                              validate_positive_price, validate_text_length)
 
 
 def validate_service_description(value):
@@ -109,6 +108,12 @@ class Service(LifecycleModel, NamedSluggedModel):
     )
     is_active = models.BooleanField(default=True, db_index=True)
 
+    # Cached ratings to optimize queries and reduce JOINs
+    cached_avg_rating = models.DecimalField(
+        max_digits=3, decimal_places=2, default=0, db_index=True
+    )
+    cached_rating_count = models.PositiveIntegerField(default=0, db_index=True)
+
     objects = QueryManager()
 
     class Meta:
@@ -123,39 +128,45 @@ class Service(LifecycleModel, NamedSluggedModel):
             models.Index(
                 fields=["price", "category", "is_active"],
             ),  # for complex price/category queries
+            models.Index(
+                fields=["is_active", "name"]
+            ),  # for active services sorted by name
+            models.Index(
+                fields=["is_active", "price"]
+            ),  # for active services sorted by price
+            # Indexes for cached ratings
+            models.Index(
+                fields=["cached_avg_rating", "is_active"]
+            ),  # for rating-based queries
+            models.Index(
+                fields=["cached_rating_count", "is_active"]
+            ),  # for popularity queries
+            models.Index(
+                fields=["is_active", "cached_avg_rating"]
+            ),  # for active services sorted by rating
+            models.Index(
+                fields=["is_active", "cached_rating_count"]
+            ),  # for active services sorted by popularity
         ]
 
     # Remove __str__ method as it's now in NamedSluggedModel
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._rating_cache = None
 
-    def _calculate_average_rating(self):
-        """Private method to calculate average rating"""
-        try:
-            return self.rating_aggregation.average
-        except ServiceRatingAggregation.DoesNotExist:
-            return 0
 
-    def _get_review_count(self):
-        """Private method to get review count"""
-        try:
-            return self.rating_aggregation.count
-        except ServiceRatingAggregation.DoesNotExist:
-            return 0
 
     @property
     def avg_rating(self):
         """Get the average rating for this service."""
-        if self._rating_cache is None:
-            self._rating_cache = self._calculate_average_rating()
-        return self._rating_cache
+        # Use cached value for O(1) access
+        return float(self.cached_avg_rating) if self.cached_avg_rating is not None else 0
 
     @property
     def review_count(self):
         """Get the number of reviews for this service."""
-        return self._get_review_count()
+        # Use cached value for O(1) access
+        return self.cached_rating_count or 0
 
     @property
     def image_url(self) -> str | None:
@@ -168,19 +179,14 @@ class Service(LifecycleModel, NamedSluggedModel):
 
     def update_rating_cache(self):
         """Public method to refresh rating cache"""
-        self._rating_cache = None
+        # Refresh cache by calling the update method
+        self.update_rating_aggregation()
+        # Return the updated ratings
         return self.avg_rating
 
     def save(self, *args, **kwargs):
         """Save the service and update aggregated ratings."""
-        # Ensure category is provided
-        if not self.category:
-            raise ValueError("Category is required")
-
-        # Ensure price is positive
-        if self.price <= 0:
-            raise ValueError("Price must be positive")
-
+        # Validation is handled by field validators, so we just call the parent save
         super().save(*args, **kwargs)
 
         # For Vercel compatibility, we're not using MeiliSearch
@@ -193,11 +199,8 @@ class Service(LifecycleModel, NamedSluggedModel):
         # Call the parent delete method directly
         return super().delete(*args, **kwargs)
 
-    @hook(AFTER_CREATE)
-    @hook(AFTER_UPDATE)
-    @hook(AFTER_DELETE)
     def update_rating_aggregation(self):
-        """Update the ServiceRatingAggregation when a service is created, updated, or deleted."""
+        """Update the ServiceRatingAggregation and cached ratings."""
         try:
             # Ensure the service instance is properly saved before proceeding
             if not self.pk:
@@ -211,37 +214,45 @@ class Service(LifecycleModel, NamedSluggedModel):
 
             from django.db.models import Avg, Count
 
-            from .models import ServiceRatingAggregation
-
             # Calculate the new average and count
             aggregation = Review.objects.filter(service=self).aggregate(
                 avg_rating=Avg("rating"),
                 count=Count("id"),
             )
 
+            # Update the cached fields on the service itself for O(1) access
+            new_avg_rating = (
+                float(aggregation["avg_rating"])
+                if aggregation["avg_rating"] is not None
+                else 0
+            )
+            new_rating_count = aggregation["count"] or 0
+            
+            # Use direct DB update to bypass model lifecycle hooks and prevent recursion
+            self.__class__.objects.filter(pk=self.pk).update(
+                cached_avg_rating=new_avg_rating,
+                cached_rating_count=new_rating_count
+            )
+            
+            # Update the in-memory instance to reflect the changes
+            self.cached_avg_rating = new_avg_rating
+            self.cached_rating_count = new_rating_count
+
             # Get or create the ServiceRatingAggregation object
             rating_aggregation, created = (
                 ServiceRatingAggregation.objects.get_or_create(
                     service=self,
                     defaults={
-                        "average": (
-                            float(aggregation["avg_rating"])
-                            if aggregation["avg_rating"] is not None
-                            else 0
-                        ),
-                        "count": aggregation["count"] or 0,
+                        "average": new_avg_rating,  # Use the new values
+                        "count": new_rating_count,
                     },
                 )
             )
 
             # If it already existed, update it
             if not created:
-                rating_aggregation.average = (
-                    float(aggregation["avg_rating"])
-                    if aggregation["avg_rating"] is not None
-                    else 0
-                )
-                rating_aggregation.count = aggregation["count"] or 0
+                rating_aggregation.average = new_avg_rating
+                rating_aggregation.count = new_rating_count
                 rating_aggregation.save()
 
             # Use django-cachalot for automatic cache invalidation
@@ -258,6 +269,13 @@ class Service(LifecycleModel, NamedSluggedModel):
             logger.error(
                 f"Error updating rating aggregation for service {self.id}: {e}"
             )
+
+    @hook(AFTER_CREATE)
+    @hook(AFTER_UPDATE)
+    @hook(AFTER_DELETE)
+    def update_rating_aggregation_hook(self):
+        """Hook method that triggers the rating aggregation update."""
+        self.update_rating_aggregation()
 
     @hook(AFTER_CREATE)
     def update_advanced_data_structures_on_create(self):
@@ -387,6 +405,24 @@ class Service(LifecycleModel, NamedSluggedModel):
             )
 
 
+class Favorite(BaseModel):
+    """User favorites for services"""
+
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="favorites"
+    )
+    service = models.ForeignKey(
+        "Service", on_delete=models.CASCADE, related_name="favorited_by"
+    )
+
+    class Meta:
+        unique_together = ("user", "service")
+        ordering = ["-created"]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.service.name}"
+
+
 class Review(BaseReview):
     """Customer reviews for services with sentiment analysis"""
 
@@ -418,6 +454,7 @@ class Review(BaseReview):
     def update_service_rating(self):
         """Update the service rating when a review is created, updated, or deleted."""
         # Trigger the service's rating aggregation update
+        # We call it directly on the service instance
         self.service.update_rating_aggregation()
 
 
@@ -437,23 +474,36 @@ class ServiceRatingAggregation(models.Model):
 
     class Meta:
         ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["average"], name="rating_aggr_average_idx"),
+            models.Index(fields=["updated_at"], name="rating_aggr_updated_at_idx"),
+            models.Index(
+                fields=["average", "updated_at"], name="rating_aggr_avg_updated_idx"
+            ),
+        ]
 
     def __str__(self):
         return f"{self.service.name} - Avg: {self.average}, Count: {self.count}"
 
 
-# Custom metaclass to combine ABCMeta with ModelBase
-class ABCModelBase(ABCMeta, ModelBase):
-    """Metaclass combining ABCMeta and ModelBase to allow abstract base classes
-    that also inherit from Django models
+# Custom metaclass that properly combines ModelBase and ABC functionality
+class ABCModelBase(ModelBase):
+    """
+    Metaclass that properly combines ModelBase and ABC functionality.
+    This allows abstract base classes to work with Django models.
     """
 
-    def __new__(cls, name, bases, attrs, **kwargs):
-        # Call both parent metaclass constructors in the right order
-        return super().__new__(cls, name, bases, attrs, **kwargs)
+    def __new__(cls, name, bases, namespace, **kwargs):
+        # Call the ModelBase.__new__ to handle Django model creation
+        result = super().__new__(cls, name, bases, namespace, **kwargs)
+
+        # Apply ABC behavior by initializing ABC on the result class
+        ABC.__init__(result)
+
+        return result
 
 
-class BaseService(NamedSluggedModel, ABC, metaclass=ABCModelBase):
+class BaseService(NamedSluggedModel, metaclass=ABCModelBase):
     """Abstract base class for all service types with polymorphic behavior"""
 
     SERVICE_TYPES = [

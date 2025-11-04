@@ -444,40 +444,12 @@ def populate_all_demo_data():
     print(f"Successfully created {review_count} demo reviews!")
 
     # Recalculate rating aggregations for all services to ensure counts are accurate
-    from django.db.models import Avg, Count
-
+    # Use the built-in method that properly updates cached fields and relationships
     for service in created_services:
-        # Calculate average rating and count from all reviews for this service
-        aggregation_data = Review.objects.filter(service=service).aggregate(
-            avg_rating=Avg("rating"),
-            count=Count("id"),
-        )
-
-        # Get or create the ServiceRatingAggregation object
-        rating_aggregation, created = ServiceRatingAggregation.objects.get_or_create(
-            service=service,
-            defaults={
-                "average": (
-                    float(aggregation_data["avg_rating"])
-                    if aggregation_data["avg_rating"] is not None
-                    else 0
-                ),
-                "count": aggregation_data["count"] or 0,
-            },
-        )
-
-        # If it already existed, update it
-        if not created:
-            rating_aggregation.average = (
-                float(aggregation_data["avg_rating"])
-                if aggregation_data["avg_rating"] is not None
-                else 0
-            )
-            rating_aggregation.count = aggregation_data["count"] or 0
-            rating_aggregation.save()
-
+        # This method ensures cached_avg_rating and cached_rating_count are updated properly
+        service.update_rating_aggregation()
         print(
-            f"Updated rating aggregation for service '{service.name}': avg={rating_aggregation.average}, count={rating_aggregation.count}"
+            f"Updated rating aggregation for service '{service.name}': avg={service.cached_avg_rating}, count={service.cached_rating_count}"
         )
 
     print("\nDemo data population completed!")

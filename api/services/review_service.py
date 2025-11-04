@@ -92,8 +92,7 @@ class ReviewService(BaseService):
                 raise PermissionError("You can only edit your own reviews.")
 
             # Validate review data
-            from utils.validation_utils import (validate_rating,
-                                                validate_text_length)
+            from utils.validation import validate_rating, validate_text_length
 
             # Validate rating if provided
             if "rating" in data and data["rating"] is not None:

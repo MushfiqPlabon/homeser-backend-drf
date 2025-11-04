@@ -1,8 +1,16 @@
 from rest_framework.pagination import CursorPagination
 
 
-class ServiceCursorPagination(CursorPagination):
-    """Custom cursor pagination for services that orders by created_at field."""
+class OptimizedServiceCursorPagination(CursorPagination):
+    """Optimized cursor pagination for services that works with multiple ordering fields."""
 
-    ordering = "-created_at"
+    # Default ordering field that matches the model's default ordering
+    ordering = "-created"
     page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
+class ServiceCursorPagination(OptimizedServiceCursorPagination):
+    """Alias for backward compatibility"""
+

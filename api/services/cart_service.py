@@ -120,46 +120,46 @@ class CartService(BaseService):
     ) -> Union[Dict[str, Any], Order]:
         """Add service to cart with O(1) hash map operations"""
         user_id = user.id
-        cart_map = cls.get_cart_items(user_id)
 
-        # O(1) lookup and update
-        if service_id in cart_map:
-            cart_map[service_id]["quantity"] += quantity
-        else:
-            # Add new item with service data lookup
-            if service_data := service_hash_table.get(str(service_id)):
-                service_price = service_data.get("price")
-                service_name = service_data.get("name")
+        # Validate service exists and is active
+        try:
+            service = Service.objects.get(id=service_id, is_active=True)
+        except Service.DoesNotExist:
+            raise ValueError("Service not found or not active")
+
+        # Validate quantity is positive
+        if quantity <= 0:
+            raise ValueError("Quantity must be greater than 0")
+
+        # Use atomic transaction to prevent race conditions
+        with transaction.atomic():
+            cart_map = cls.get_cart_items(user_id)
+
+            # O(1) lookup and update
+            if service_id in cart_map:
+                cart_map[service_id]["quantity"] += quantity
             else:
-                # Fallback to database with caching
-                try:
-                    service = Service.objects.get(id=service_id, is_active=True)
-                    service_price = str(service.price)
-                    service_name = service.name
+                # Cache for future O(1) lookups
+                service_hash_table.set(
+                    str(service_id),
+                    {
+                        "id": service.id,
+                        "name": service.name,
+                        "price": str(service.price),
+                        "is_active": service.is_active,
+                    },
+                )
 
-                    # Cache for future O(1) lookups
-                    service_hash_table.set(
-                        str(service_id),
-                        {
-                            "id": service.id,
-                            "name": service_name,
-                            "price": service_price,
-                            "is_active": service.is_active,
-                        },
-                    )
-                except Service.DoesNotExist:
-                    raise ValueError("Service not found or not active")
+                cart_map[service_id] = {
+                    "service_id": service_id,
+                    "quantity": quantity,
+                    "price": str(service.price),
+                    "service_name": service.name,
+                }
 
-            cart_map[service_id] = {
-                "service_id": service_id,
-                "quantity": quantity,
-                "price": service_price,
-                "service_name": service_name,
-            }
-
-        # Save to Redis and database
-        cls._save_cart(user_id, cart_map)
-        return cls._get_cart_response(user_id, cart_map)
+            # Save to Redis and database atomically
+            cls._save_cart(user_id, cart_map)
+            return cls._get_cart_response(user_id, cart_map)
 
     @classmethod
     @log_service_method
@@ -168,14 +168,17 @@ class CartService(BaseService):
     ) -> Union[Dict[str, Any], Order]:
         """Remove item from cart with O(1) hash map operations"""
         user_id = user.id
-        cart_map = cls.get_cart_items(user_id)
 
-        # O(1) removal
-        if service_id in cart_map:
-            del cart_map[service_id]
-            cls._save_cart(user_id, cart_map)
+        # Use atomic transaction to prevent race conditions
+        with transaction.atomic():
+            cart_map = cls.get_cart_items(user_id)
 
-        return cls._get_cart_response(user_id, cart_map)
+            # O(1) removal
+            if service_id in cart_map:
+                del cart_map[service_id]
+                cls._save_cart(user_id, cart_map)
+
+            return cls._get_cart_response(user_id, cart_map)
 
     @classmethod
     @log_service_method
@@ -184,14 +187,21 @@ class CartService(BaseService):
     ) -> Union[Dict[str, Any], Order]:
         """Update cart item quantity with O(1) hash map operations"""
         user_id = user.id
-        cart_map = cls.get_cart_items(user_id)
 
-        # O(1) update
-        if service_id in cart_map:
-            cart_map[service_id]["quantity"] = quantity
-            cls._save_cart(user_id, cart_map)
+        # Validate quantity is positive
+        if quantity <= 0:
+            raise ValueError("Quantity must be greater than 0")
 
-        return cls._get_cart_response(user_id, cart_map)
+        # Use atomic transaction to prevent race conditions
+        with transaction.atomic():
+            cart_map = cls.get_cart_items(user_id)
+
+            # O(1) update
+            if service_id in cart_map:
+                cart_map[service_id]["quantity"] = quantity
+                cls._save_cart(user_id, cart_map)
+
+            return cls._get_cart_response(user_id, cart_map)
 
     @classmethod
     def _save_cart(cls, user_id: int, cart_map: Dict[int, Dict[str, Any]]) -> None:
@@ -224,7 +234,14 @@ class CartService(BaseService):
                 order, created = Order.objects.select_for_update().get_or_create(
                     user_id=user_id,
                     _status="draft",
-                    defaults={"_payment_status": "unpaid"},
+                    defaults={
+                        "_payment_status": "unpaid",
+                        "customer_name": "",
+                        "customer_address": "",
+                        "subtotal": Decimal("0.00"),
+                        "tax": Decimal("0.00"),
+                        "total": Decimal("0.00"),
+                    },
                 )
 
                 # Clear existing items
@@ -240,19 +257,29 @@ class CartService(BaseService):
                     )
         except Exception as e:
             logger.error(f"Database save error for user {user_id}: {e}")
+            raise
 
     @classmethod
     def _get_cart_response(
         cls, user_id: int, cart_map: Dict[int, Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Convert hash map back to response format"""
+        total_items = sum(item["quantity"] for item in cart_map.values())
+        total_price = sum(
+            item["quantity"] * float(item["price"]) for item in cart_map.values()
+        )
+
+        # Calculate tax at 15% (consistent with Order model)
+        tax = total_price * 0.15
+        total = total_price + tax
+
         return {
             "user_id": user_id,
             "items": list(cart_map.values()),
-            "total_items": sum(item["quantity"] for item in cart_map.values()),
-            "total_price": sum(
-                item["quantity"] * float(item["price"]) for item in cart_map.values()
-            ),
+            "total_items": total_items,
+            "total_price": total_price,
+            "tax": tax,
+            "total": total,
         }
 
     @classmethod
@@ -264,7 +291,14 @@ class CartService(BaseService):
     def get_cart(cls, user: User) -> Dict[str, Any]:
         """Get user's complete cart"""
         if not user.is_authenticated:
-            return {"user_id": None, "items": [], "total_items": 0, "total_price": 0}
+            return {
+                "user_id": None,
+                "items": [],
+                "total_items": 0,
+                "total_price": 0,
+                "tax": 0,
+                "total": 0,
+            }
 
         cart_map = cls.get_cart_items(user.id)
         return cls._get_cart_response(user.id, cart_map)

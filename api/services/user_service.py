@@ -72,8 +72,8 @@ class UserService(BaseService):
 
         """
         # Validate user data
-        from utils.validation_utils import (validate_email_format,
-                                            validate_text_length)
+        from utils.validation import (validate_email_format,
+                                      validate_text_length)
 
         # Validate username
         try:
@@ -181,8 +181,8 @@ class UserService(BaseService):
         cls._common_permission_check(user, requesting_user, "change")
 
         # Validate user data
-        from utils.validation_utils import (validate_email_format,
-                                            validate_text_length)
+        from utils.validation import (validate_email_format,
+                                      validate_text_length)
 
         # Validate first name if provided
         if data.get("first_name"):
@@ -316,7 +316,7 @@ class UserService(BaseService):
         profile = cls.get_user_profile(user)
 
         # Validate profile data
-        from utils.validation_utils import validate_phone, validate_text_length
+        from utils.validation import validate_phone, validate_text_length
 
         # Validate bio if provided
         if data.get("bio"):

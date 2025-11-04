@@ -2,28 +2,54 @@ from django.db.models import Avg, Count, Q
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, permissions, status
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from services.models import Service
 
 from ..filters import ServiceFilter
+from ..pagination import OptimizedServiceCursorPagination
 from ..serializers import ServiceSerializer
 from ..services.service_service import ServiceService
 from ..unified_base_views import (CRUDTemplateMixin, UnifiedAdminViewSet,
                                   UnifiedBaseGenericView)
 
 
+class CustomOrderingFilter(filters.OrderingFilter):
+    def filter(self, qs, value):
+        if value:
+            # Apply field mappings to use cached fields instead of computed ones
+            ordering_fields = []
+            for param in value:
+                if param == "avg_rating":
+                    ordering_fields.append("cached_avg_rating")
+                elif param == "-avg_rating":
+                    ordering_fields.append("-cached_avg_rating")
+                elif param == "popularity":
+                    ordering_fields.append("cached_rating_count")
+                elif param == "-popularity":
+                    ordering_fields.append("-cached_rating_count")
+                else:
+                    ordering_fields.append(param)
+
+            # Always add 'id' as the final tiebreaker to ensure consistent pagination
+            ordering_fields.append("id")
+            return qs.order_by(*ordering_fields)
+
+        return qs
+
+
 class ServiceFilterWithOrdering(ServiceFilter):
     """Service filter with ordering capabilities"""
 
-    ordering = filters.OrderingFilter(
+    ordering = CustomOrderingFilter(
         fields=(
             ("name", "name"),
             ("price", "price"),
             ("created", "created"),
-            ("rating_aggregation__average", "avg_rating"),
-            ("rating_aggregation__count", "popularity"),
+            ("cached_avg_rating", "avg_rating"),  # Use the cached field name
+            ("cached_rating_count", "popularity"),  # Use the cached field name
         ),
         field_labels={
             "name": "Name",
@@ -43,21 +69,52 @@ class ServiceListView(UnifiedBaseGenericView, generics.ListAPIView):
 
     serializer_class = ServiceSerializer
     permission_classes = [permissions.AllowAny]
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_class = ServiceFilterWithOrdering
     ordering_fields = ["name", "price", "created", "avg_rating"]
     ordering = ["-created"]
+    pagination_class = (
+        OptimizedServiceCursorPagination  # Use cursor pagination for large datasets
+    )
     service_class = ServiceService
 
     def get_queryset(self):
-        """Simplified queryset for services"""
+        """Optimized queryset for services with performance in mind using cached fields"""
+
         # Handle schema generation case
         if getattr(self, "swagger_fake_view", False):
             return Service.objects.none()
 
-        # Simple queryset that works
-        queryset = Service.objects.select_related("category", "owner").filter(
-            is_active=True
+        # Optimized queryset using cached rating fields to eliminate expensive JOINs
+        queryset = (
+            Service.objects.select_related(
+                "category", "owner"
+            )  # Required relationships
+            .only(
+                "id",
+                "name",
+                "slug",
+                "price",
+                "short_desc",
+                "description",
+                "image",
+                "is_active",
+                "created",
+                "modified",
+                "owner_id",
+                "category_id",
+                "cached_avg_rating",
+                "cached_rating_count",  # Use cached fields
+                "category__id",
+                "category__name",
+                "category__slug",
+                "category__description",
+                "owner__id",
+                "owner__username",
+                "owner__first_name",
+                "owner__last_name",
+            )  # Only fetch necessary fields to improve performance
+            .filter(is_active=True)  # Only include active services
         )
 
         # Apply search if provided
@@ -71,17 +128,40 @@ class ServiceListView(UnifiedBaseGenericView, generics.ListAPIView):
         return queryset
 
     def list(self, request, *args, **kwargs) -> Response:
-        """List services with caching and pagination"""
+        """List services with enhanced caching and pagination"""
+        from django.core.cache import cache
+
+        # Create a cache key based on request parameters
+        ordering = request.GET.get("ordering", "created")
+        search = request.GET.get("search", "")
+        page = request.GET.get("page", "1")
+        page_size = request.GET.get("page_size", "20")
+
+        # Create a cache key based on parameters
+        cache_key = f"services_list_{ordering}_{search}_page_{page}_size_{page_size}"
+
+        # Try to get cached response
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            return Response(cached_response)
+
+        # If not cached, execute the query
         queryset = self.filter_queryset(self.get_queryset())
 
         # Apply pagination
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        page_result = self.paginate_queryset(queryset)
+        if page_result is not None:
+            serializer = self.get_serializer(page_result, many=True)
+            response_data = self.get_paginated_response(serializer.data).data
+            # Cache the result for 2 minutes (adjust as needed)
+            cache.set(cache_key, response_data, 120)
+            return Response(response_data)
 
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        response_data = serializer.data
+        # Cache the result for 2 minutes (adjust as needed)
+        cache.set(cache_key, response_data, 120)
+        return Response(response_data)
 
 
 class ServiceDetailView(UnifiedBaseGenericView, generics.RetrieveAPIView):

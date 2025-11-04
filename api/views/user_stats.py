@@ -51,6 +51,13 @@ class ChangePasswordView(APIView):
                 {"error": "Incorrect old password"}, status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Check that the new password is different from the old password
+        if old_password == new_password:
+            return Response(
+                {"error": "New password must be different from old password"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             validate_password(new_password, user)
         except ValidationError as e:

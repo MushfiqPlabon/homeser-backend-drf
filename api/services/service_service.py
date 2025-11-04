@@ -253,8 +253,8 @@ class ServiceService(BaseService):
                 raise PermissionDenied("You do not have permission to create services")
 
         # Validate service data
-        from utils.validation_utils import (validate_positive_price,
-                                            validate_text_length)
+        from utils.validation import (validate_positive_price,
+                                      validate_text_length)
 
         # Validate name
         try:
@@ -494,7 +494,7 @@ class ServiceService(BaseService):
             validation_data = {"rating": rating, "text": text}
 
             # Validate rating
-            from utils.validation_utils import validate_rating
+            from utils.validation import validate_rating
 
             try:
                 validation_data["rating"] = validate_rating(validation_data["rating"])
@@ -505,7 +505,7 @@ class ServiceService(BaseService):
                 raise ValidationError(f"Invalid rating: {e!s}")
 
             # Validate text length
-            from utils.validation_utils import validate_text_length
+            from utils.validation import validate_text_length
 
             try:
                 validation_data["text"] = validate_text_length(

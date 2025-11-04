@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Review, Service, ServiceCategory
+from .models import Favorite, Review, Service, ServiceCategory
 
 
 @admin.register(ServiceCategory)
@@ -22,6 +22,14 @@ class ServiceAdmin(admin.ModelAdmin):
     list_filter = ("category", "is_active", "created")
     search_fields = ("name", "short_desc")
     prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Favorite)
+class FavoriteAdmin(admin.ModelAdmin):
+    list_display = ("user", "service", "created")
+    list_filter = ("created",)
+    search_fields = ("user__email", "service__name")
+    readonly_fields = ("created", "modified")
 
 
 @admin.register(Review)

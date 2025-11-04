@@ -13,7 +13,7 @@ class UserPreferencesView(APIView):
     def get(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
         preferences = (
-            profile.social_links if isinstance(profile.social_links, dict) else {}
+            profile.preferences if isinstance(profile.preferences, dict) else {}
         )
         return Response(
             {
@@ -25,7 +25,7 @@ class UserPreferencesView(APIView):
     def patch(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
         preferences = (
-            profile.social_links if isinstance(profile.social_links, dict) else {}
+            profile.preferences if isinstance(profile.preferences, dict) else {}
         )
 
         if "email_notifications" in request.data:
@@ -33,7 +33,7 @@ class UserPreferencesView(APIView):
         if "sms_notifications" in request.data:
             preferences["sms_notifications"] = request.data["sms_notifications"]
 
-        profile.social_links = preferences
+        profile.preferences = preferences
         profile.save()
 
         return Response({"message": "Preferences updated successfully"})

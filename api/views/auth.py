@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, serializers, status
@@ -29,62 +28,29 @@ class TokenRefreshView(SimpleJWTTokenRefreshView):
     """
 
     def post(self, request, *args, **kwargs):
-        # Get refresh token from cookies if available
-        refresh_token = request.COOKIES.get("refresh_token")
+        # Get refresh token from request body
+        refresh_token = request.data.get("refresh")
 
-        # If refresh token is in cookies, add it to request data
-        if refresh_token and not request.data.get("refresh"):
-            request.data._mutable = True
-            request.data["refresh"] = refresh_token
-            request.data._mutable = False
+        # If there's no refresh token in the body, try to get it from cookies as fallback
+        if not refresh_token:
+            refresh_token = request.COOKIES.get("refresh_token")
+            if refresh_token:
+                # Add it to request data for SimpleJWT to process
+                request.data._mutable = True
+                request.data["refresh"] = refresh_token
+                request.data._mutable = False
 
         # Call the parent post method to handle the token refresh
         response = super().post(request, *args, **kwargs)
 
-        # If the response indicates success, return it as-is since SimpleJWT
-        # already formats it correctly with access and refresh tokens
+        # If the response indicates success, keep tokens in the response body for frontend to handle
         if response.status_code == 200:
-            # Set the new access token as a cookie
-            new_access_token = response.data.get("access")
-            if new_access_token:
-                access_token_lifetime = int(
-                    settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()
-                )
-
-                response.set_cookie(
-                    key="access_token",
-                    value=new_access_token,
-                    httponly=True,
-                    secure=settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False),
-                    samesite=settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax"),
-                    max_age=access_token_lifetime,
-                    path=settings.SIMPLE_JWT.get("AUTH_COOKIE_PATH", "/"),
-                )
-
-            # If a new refresh token was issued, set it as a cookie
-            new_refresh_token = response.data.get("refresh")
-            if new_refresh_token:
-                refresh_token_lifetime = int(
-                    settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
-                )
-
-                response.set_cookie(
-                    key="refresh_token",
-                    value=new_refresh_token,
-                    httponly=True,
-                    secure=settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False),
-                    samesite=settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax"),
-                    max_age=refresh_token_lifetime,
-                    path=settings.SIMPLE_JWT.get("AUTH_COOKIE_PATH", "/"),
-                )
-
-            # Remove tokens from response data for security
-            if "access" in response.data:
-                del response.data["access"]
-            if "refresh" in response.data:
-                del response.data["refresh"]
-
+            # Add success message to response
             response.data["message"] = "Token refreshed successfully"
+
+            # Delete cookies to prevent confusion - let frontend handle token storage
+            response.delete_cookie("access_token")
+            response.delete_cookie("refresh_token")
 
             return response
 
@@ -134,15 +100,12 @@ class LogoutView(UnifiedBaseGenericView):
 
     def post(self, request, *args, **kwargs):
         """
-        Handle user logout by clearing authentication cookies.
+        Handle user logout.
+        Frontend should clear tokens from localStorage/sessionStorage.
         """
         response = Response(
             {"message": "Logged out successfully"}, status=status.HTTP_200_OK
         )
-
-        # Clear authentication cookies
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token")
 
         return response
 
@@ -180,41 +143,15 @@ class RegisterView(UnifiedBaseGenericView):
             # 'access' token is used for authenticating subsequent API requests.
             refresh = RefreshToken.for_user(user)
 
-            # Set tokens as httpOnly cookies
+            # Return tokens in response body for frontend to handle
             response_data = {
                 "user": UserSerializer(user).data,
                 "message": "Registration successful",
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
             }
 
             response = Response(response_data, status=status.HTTP_201_CREATED)
-
-            # Set httpOnly cookies for better security
-            access_token_lifetime = int(
-                settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()
-            )
-            refresh_token_lifetime = int(
-                settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
-            )
-
-            response.set_cookie(
-                key="access_token",
-                value=str(refresh.access_token),
-                httponly=True,
-                secure=settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False),
-                samesite=settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax"),
-                max_age=access_token_lifetime,
-                path=settings.SIMPLE_JWT.get("AUTH_COOKIE_PATH", "/"),
-            )
-
-            response.set_cookie(
-                key="refresh_token",
-                value=str(refresh),
-                httponly=True,
-                secure=settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False),
-                samesite=settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax"),
-                max_age=refresh_token_lifetime,
-                path=settings.SIMPLE_JWT.get("AUTH_COOKIE_PATH", "/"),
-            )
 
             return response
         except Exception as e:
@@ -246,7 +183,7 @@ class LoginView(UnifiedBaseGenericView):
         # 'access' token is used for authenticating subsequent API requests.
         refresh = RefreshToken.for_user(user)
 
-        # Set tokens as httpOnly cookies
+        # Return tokens in response body for frontend to handle
         response_data = {
             "message": "Login successful",
             "user": UserSerializer(user).data,
@@ -255,33 +192,5 @@ class LoginView(UnifiedBaseGenericView):
         }
 
         response = Response(response_data)
-
-        # Set httpOnly cookies for better security
-        access_token_lifetime = int(
-            settings.SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()
-        )
-        refresh_token_lifetime = int(
-            settings.SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
-        )
-
-        response.set_cookie(
-            key="access_token",
-            value=str(refresh.access_token),
-            httponly=True,
-            secure=settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False),
-            samesite=settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax"),
-            max_age=access_token_lifetime,
-            path=settings.SIMPLE_JWT.get("AUTH_COOKIE_PATH", "/"),
-        )
-
-        response.set_cookie(
-            key="refresh_token",
-            value=str(refresh),
-            httponly=True,
-            secure=settings.SIMPLE_JWT.get("AUTH_COOKIE_SECURE", False),
-            samesite=settings.SIMPLE_JWT.get("AUTH_COOKIE_SAMESITE", "Lax"),
-            max_age=refresh_token_lifetime,
-            path=settings.SIMPLE_JWT.get("AUTH_COOKIE_PATH", "/"),
-        )
 
         return response

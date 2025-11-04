@@ -7,9 +7,9 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
-from utils.validation_utils import (validate_email_format, validate_name,
-                                    validate_phone, validate_positive_price,
-                                    validate_rating, validate_text_length)
+from utils.validation import (validate_email_format, validate_name,
+                              validate_phone, validate_positive_price,
+                              validate_rating, validate_text_length)
 
 
 class UtilsTestCase(TestCase):
